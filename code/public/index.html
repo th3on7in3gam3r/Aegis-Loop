@@ -96,6 +96,11 @@
         <span class="nav-section-label">Recent scans</span>
         <ul id="scanHistory" class="scan-history"></ul>
       </div>
+
+      <div class="loop-nap-note sidebar-nap" role="note">
+        <span class="loop-nap-icon" aria-hidden="true">◌</span>
+        <p><strong>Loop asleep?</strong> We hibernate when idle. First visit after a quiet spell may take ~30s — then we're at full speed.</p>
+      </div>
     </aside>
 
     <div class="shell-main">
@@ -247,6 +252,14 @@
               <h3>Scanner</h3>
               <p class="settings-desc">Capabilities enabled on this server instance.</p>
               <div id="settingsScanner" class="settings-card">Loading…</div>
+            </section>
+            <section class="settings-section">
+              <h3>Workspace</h3>
+              <p class="settings-desc">How this instance behaves while you're away.</p>
+              <div class="settings-card loop-nap-note settings-nap">
+                <span class="loop-nap-icon" aria-hidden="true">◌</span>
+                <p><strong>Hibernation mode.</strong> The loop powers down between visits to keep things free and lightweight. After idle time, the first page load can take up to ~30 seconds while scanners boot — then everything runs at full speed. Scan history may also reset after a long sleep.</p>
+              </div>
             </section>
             <section class="settings-section">
               <h3>Session</h3>

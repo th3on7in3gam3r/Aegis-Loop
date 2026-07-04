@@ -60,6 +60,14 @@ const DOC_SECTIONS = [
       <li><code>POST /api/scans/:id/findings/:fid/autofix</code> — apply fix</li>
     </ul>`,
   },
+  {
+    id: 'performance',
+    title: 'Slow first load?',
+    keywords: 'slow sleep hibernate idle cold start wake performance',
+    html: `<p><strong>The loop sleeps.</strong> This workspace powers down when nobody is using it — less waste, zero cost surprises.</p>
+      <p>After idle time, your first visit may take ~30 seconds while scanners wake up. Refreshing or navigating again is instant once we're warm.</p>
+      <p>Long sleeps can also clear locally stored scan history. Connect GitHub and rescan anytime.</p>`,
+  },
 ];
 
 const $ = (sel) => document.querySelector(sel);
