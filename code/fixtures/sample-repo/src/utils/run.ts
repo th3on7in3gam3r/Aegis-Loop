@@ -1,4 +1,12 @@
-// Demo fixture — triggers unsafe-eval rule
+// Demo fixture — remediated: explicit handler map instead of dynamic eval
+const HANDLERS: Record<string, () => string> = {
+  ping: () => 'pong',
+};
+
 export function runUserCode(source: string) {
-  return eval(source);
+  const handler = HANDLERS[source.trim()];
+  if (!handler) {
+    throw new Error(`Unsupported handler: ${source}`);
+  }
+  return handler();
 }
