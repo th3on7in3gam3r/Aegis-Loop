@@ -1,0 +1,11 @@
+{
+  "name": "aegis-loop",
+  "private": true,
+  "scripts": {
+    "build": "npm install --prefix code",
+    "start": "npm start --prefix code"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

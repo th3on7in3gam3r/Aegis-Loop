@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: aegis-loop
+    runtime: node
+    branch: main
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: APP_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in — Aegis Loop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/app/login.css">
+  <script>
+    (function () {
+      var t = localStorage.getItem('aegis-theme');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+</head>
+<body>
+  <button type="button" class="login-theme-toggle" id="themeToggle" aria-label="Toggle theme">
+    <svg class="icon-moon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M13.5 9.2A5.5 5.5 0 017.3 2.8 5.5 5.5 0 1013.5 9.2z"/></svg>
+    <svg class="icon-sun" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06"/></svg>
+  </button>
+  <div class="login-page">
+    <div class="login-left">
+      <a href="/" class="logo">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M14 2L4 7v7c0 6.5 4.3 10.5 10 12 5.7-1.5 10-5.5 10-12V7L14 2z" fill="#7c3aed"/><path d="M14 8v8M10 12h8" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Aegis Loop
+      </a>
+
+      <div class="login-card">
+        <div class="pill-label">One-click login &amp; sign-up</div>
+        <h1>Start securing your code in minutes</h1>
+        <p class="sub">Free to start. No credit card required.</p>
+
+        <a href="/api/auth/github" class="btn-github" id="githubBtn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          Continue with GitHub
+        </a>
+
+        <button type="button" class="more-options" id="togglePat">More options</button>
+
+        <div class="pat-panel hidden" id="patPanel">
+          <label for="patInput">Personal access token</label>
+          <input id="patInput" type="password" placeholder="github_pat_..." autocomplete="off">
+          <button type="button" class="btn-secondary" id="patSubmit">Connect with token</button>
+          <p class="hint">Needs <code>repo</code> scope. Stored in a signed session cookie.</p>
+        </div>
+
+        <div class="login-footer-links">
+          <a href="/app/">Try demo without signing in →</a>
+        </div>
+      </div>
+    </div>
+
+    <aside class="login-right">
+      <div class="trust-card">
+        <div class="trust-icon">◈</div>
+        <h3>Select accessible repos · Use our demo</h3>
+        <p>Choose which repositories Aegis Loop can scan, or explore with the bundled sample app first.</p>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon">🔒</div>
+        <h3>Secure read-only analysis</h3>
+        <p>Scans run against cloned code. We never store your source — findings live in your session.</p>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon">⚡</div>
+        <h3>Findings in your pull requests</h3>
+        <p>Autofix commits land on your PR branch. Commit checks and comments post automatically.</p>
+      </div>
+      <div class="trust-stats">
+        <div><strong>11 min</strong><span>avg. time to first fix</span></div>
+        <div><strong>92%</strong><span>alert noise reduced</span></div>
+        <div><strong>4 modules</strong><span>code · cloud · attack · protect</span></div>
+      </div>
+    </aside>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/app/login.js" type="module"></script>
+</body>
+</html>
