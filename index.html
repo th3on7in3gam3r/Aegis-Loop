@@ -138,6 +138,7 @@
   .nav-actions { display: flex; align-items: center; gap: 16px; }
   .nav-login { font-size: 14px; font-weight: 500; color: var(--text-secondary); transition: color 0.2s; }
   .nav-login:hover { color: var(--text-primary); }
+  .nav-auth-only[hidden] { display: none !important; }
 
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -721,8 +722,8 @@
         <li><a href="#contact">Contact</a></li>
       </ul>
       <div class="nav-actions">
-        <a href="/app/" class="nav-login">Dashboard</a>
-        <a href="/login" class="nav-login">Login</a>
+        <a href="/app/" class="nav-login nav-auth-only" id="navDashboard" hidden>Dashboard</a>
+        <a href="/login" class="nav-login" id="navLogin">Login</a>
         <a href="/login" class="btn btn-primary">Start for Free</a>
       </div>
       <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu"><span></span></button>
@@ -738,8 +739,8 @@
   <a href="#pricing">Pricing</a>
   <a href="#contact">Contact</a>
   <div class="mobile-nav-actions">
-    <a href="/app/" class="btn btn-ghost">Dashboard</a>
-    <a href="/login" class="btn btn-ghost">Login</a>
+    <a href="/app/" class="btn btn-ghost nav-auth-only" id="mobileDashboard" hidden>Dashboard</a>
+    <a href="/login" class="btn btn-ghost" id="mobileLogin">Login</a>
     <a href="/login" class="btn btn-primary">Start for Free</a>
   </div>
 </div>
@@ -1310,6 +1311,17 @@
       contactSuccess.classList.add('visible');
     });
   }
+
+  // Show Dashboard in nav only when signed in
+  fetch('/api/auth/me', { credentials: 'include' })
+    .then((res) => (res.ok ? res.json() : { connected: false }))
+    .then((data) => {
+      if (!data.connected) return;
+      document.querySelectorAll('.nav-auth-only').forEach((el) => {
+        el.hidden = false;
+      });
+    })
+    .catch(() => {});
 </script>
 </body>
 </html>
