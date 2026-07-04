@@ -3,11 +3,11 @@ import express from 'express';
 const app = express();
 
 // Intentionally vulnerable — demo fixture for Aegis Loop / code
-// AWS key uses env (safe for public repos). Other demo vulns: api_key, password, SQL, eval.
+// AWS key + password use env (safe for public repos). Other demo vulns: api_key, SQL, eval.
 const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID ?? '' /* moved to env */;
 const api_key = 'aegis_loop_demo_not_a_real_stripe_key';
 
-const password = 'SuperSecret123!';
+const password = process.env.PASSWORD ?? '' /* moved to env */;
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });

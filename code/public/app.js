@@ -31,7 +31,7 @@ const DOC_SECTIONS = [
       <ul><li><strong>Single repo</strong> — <code>owner/repo</code> + branch (default <code>main</code>)</li>
       <li><strong>All repos</strong> — sequential scan of every accessible repository</li>
       <li><strong>Pull request</strong> — <code>owner/repo#123</code> or PR URL; optional comment + check</li></ul>
-      <p>Rules: exposed secrets, SQL injection patterns, <code>eval()</code>, vulnerable npm packages.</p>`,
+      <p>Rules: exposed secrets, SQL injection patterns, dynamic code execution (<code>unsafe-eval</code>), vulnerable npm packages.</p>`,
   },
   {
     id: 'autofix',
