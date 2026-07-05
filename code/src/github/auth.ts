@@ -1,18 +1,32 @@
 import { randomBytes } from 'node:crypto';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import { config, oauthConfigured } from '../config.js';
 import { createOctokit, verifyToken } from './client.js';
 import type { GitHubSession } from '../types.js';
 
-const oauthStates = new Map<string, number>();
-const STATE_TTL_MS = 10 * 60 * 1000;
+const OAUTH_STATE_COOKIE = 'aegis_oauth_state';
+const STATE_TTL_SEC = 10 * 60;
+const secureCookie = config.appUrl.startsWith('https://');
+
+const oauthCookieOpts = {
+  httpOnly: true,
+  sameSite: 'lax' as const,
+  secure: secureCookie,
+  path: '/',
+  signed: true,
+};
 
 export function isOAuthConfigured(): boolean {
   return oauthConfigured();
 }
 
-export function startOAuth(): string {
+export function startOAuth(reply: FastifyReply): string {
   const state = randomBytes(16).toString('hex');
-  oauthStates.set(state, Date.now());
+
+  reply.setCookie(OAUTH_STATE_COOKIE, state, {
+    ...oauthCookieOpts,
+    maxAge: STATE_TTL_SEC,
+  });
 
   const params = new URLSearchParams({
     client_id: config.github.clientId,
@@ -24,11 +38,16 @@ export function startOAuth(): string {
   return `https://github.com/login/oauth/authorize?${params}`;
 }
 
-export function consumeOAuthState(state: string): boolean {
-  const created = oauthStates.get(state);
-  oauthStates.delete(state);
-  if (!created) return false;
-  return Date.now() - created < STATE_TTL_MS;
+export function consumeOAuthState(
+  req: FastifyRequest,
+  reply: FastifyReply,
+  state: string
+): boolean {
+  const raw = req.unsignCookie(req.cookies[OAUTH_STATE_COOKIE] ?? '');
+  reply.clearCookie(OAUTH_STATE_COOKIE, oauthCookieOpts);
+
+  if (!raw.valid || !raw.value || raw.value !== state) return false;
+  return true;
 }
 
 export async function exchangeCode(code: string): Promise<GitHubSession> {

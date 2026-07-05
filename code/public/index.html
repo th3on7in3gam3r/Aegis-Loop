@@ -225,7 +225,7 @@
             <div class="module-guide-section">
               <h3>Two views on the same page</h3>
               <div class="module-guide-grid">
-                <article class="module-guide-card"><h4>Before any scan</h4><p>You see the hero, workflow strip (Scan → Rank → A-Fix → Ship), capability list, and a getting-started checklist. Run the demo to unlock charts.</p></article>
+                <article class="module-guide-card"><h4>Before any scan</h4><p id="overviewGuideBeforeScan">You see the hero, workflow strip (Scan → Rank → A-Fix → Ship), capability list, and a getting-started checklist. Run the demo to unlock charts.</p></article>
                 <article class="module-guide-card"><h4>After scanning</h4><p>KPI strip + four chart panels appear above the hero (hero may scroll below). Numbers reflect all repos you have scanned in this workspace.</p></article>
                 <article class="module-guide-card"><h4>Sidebar stats</h4><p>Repos, Open, and Avg score at the top of the left panel mirror Overview — they update whenever scans complete.</p></article>
               </div>
@@ -387,7 +387,8 @@
                 <button type="button" class="btn-outline btn-lg" id="homeScanBtn">+ New scan</button>
                 <button type="button" class="btn-ghost btn-lg" id="homeConnectBtn">Connect GitHub</button>
               </div>
-              <p class="home-note">Demo runs instantly — no GitHub required. Sample app includes real finding types with template autofix.</p>
+              <p class="home-note" id="homeDemoNote">Demo runs instantly — no GitHub required. Sample app includes real finding types with template autofix.</p>
+              <p class="home-note hidden" id="homeProdNote">Scan a repository or pull request with <strong>+ New scan</strong> — demo mode is disabled on production.</p>
             </div>
             <div class="home-hero-stats" id="homeStats">
               <div class="home-stat">
@@ -494,7 +495,7 @@
               <h3>Example findings</h3>
               <span class="home-preview-tag">Scanner output</span>
             </div>
-            <p class="home-panel-desc" style="margin-bottom:14px">Run the demo to see live results — ranked like this in your security feed.</p>
+            <p class="home-panel-desc" style="margin-bottom:14px" id="homePreviewNote">Run the demo to see live results — ranked like this in your security feed.</p>
             <div class="home-preview-table">
               <div class="home-preview-row head">
                 <span>Finding</span><span>Severity</span><span>Autofix</span>

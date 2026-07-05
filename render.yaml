@@ -1,3 +1,5 @@
+# Aegis Loop — Render Blueprint
+# Custom domain: after purchase, set APP_URL in Dashboard and add Custom Domain (CNAME → your-app.onrender.com).
 services:
   - type: web
     name: aegis-loop
@@ -23,6 +25,8 @@ services:
         sync: false
       - key: AEGIS_DATA_DIR
         value: /opt/render/project/src/code/data
+      - key: CONTACT_EMAIL
+        sync: false
     disk:
       name: aegis-data
       mountPath: /opt/render/project/src/code/data

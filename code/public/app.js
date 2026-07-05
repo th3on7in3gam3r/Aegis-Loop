@@ -15,6 +15,7 @@ let panelAiGenerated = false;
 let healthInfo = null;
 
 const DEMO_REPO = 'aegis-loop/sample-app';
+const CLOUD_DEMO_REPO = 'aegis-loop/cloud-demo';
 
 const SCANNER_ENGINES = [
   { id: 'secrets', title: 'Secret detection', desc: 'AWS keys, API tokens, passwords, and high-entropy strings in source.', always: true },
@@ -261,6 +262,85 @@ function moduleBadge(mod) {
   if (mod === 'attack') return { label: 'Attack', cls: 'attack' };
   return null;
 }
+
+function hasRealCodeScan() {
+  return Object.values(repoScanMap).some(
+    (s) => s.status === 'complete' && s.repo && s.repo !== DEMO_REPO
+  );
+}
+
+function isProductionDeploy() {
+  return Boolean(healthInfo?.production);
+}
+
+function shouldShowCodeDemo() {
+  if (hasRealCodeScan()) return false;
+  if (isProductionDeploy()) return false;
+  return true;
+}
+
+function codeScanEmptyMsg(short = false) {
+  if (shouldShowCodeDemo()) {
+    return short
+      ? 'Run a demo or repository scan'
+      : 'No findings yet. Run the demo scan or scan a repository to get started.';
+  }
+  return short
+    ? 'Scan a repository or pull request'
+    : 'No findings yet. Use + New scan to scan a repository or pull request.';
+}
+
+function chartEmptyMsg() {
+  return shouldShowCodeDemo()
+    ? 'Run a demo scan to populate severity breakdown'
+    : 'Run + New scan to populate severity breakdown';
+}
+
+function scanHistoryEmptyMsg() {
+  return shouldShowCodeDemo()
+    ? 'No scans yet — run the demo'
+    : 'No scans yet — use + New scan';
+}
+
+function updateDemoUi() {
+  const showCodeDemo = shouldShowCodeDemo();
+  const demoBtn = $('#homeDemoBtn');
+  const scanBtn = $('#homeScanBtn');
+  const demoNote = $('#homeDemoNote');
+  const prodNote = $('#homeProdNote');
+
+  demoBtn?.classList.toggle('hidden', !showCodeDemo);
+  demoNote?.classList.toggle('hidden', !showCodeDemo);
+  prodNote?.classList.toggle('hidden', showCodeDemo || !isProductionDeploy());
+
+  if (scanBtn) {
+    scanBtn.classList.toggle('btn-primary', !showCodeDemo);
+    scanBtn.classList.toggle('btn-outline', showCodeDemo);
+  }
+
+  $('#homeChecklist [data-step="demo"]')?.classList.toggle('hidden', !showCodeDemo);
+  $('#overviewGuideSteps [data-step="demo"]')?.classList.toggle('hidden', !showCodeDemo);
+
+  const previewNote = $('#homePreviewNote');
+  if (previewNote) {
+    previewNote.textContent = showCodeDemo
+      ? 'Run the demo to see live results — ranked like this in your security feed.'
+      : 'Example output — your findings will look like this after your first scan.';
+  }
+
+  const guideBeforeScan = $('#overviewGuideBeforeScan');
+  if (guideBeforeScan) {
+    guideBeforeScan.textContent = showCodeDemo
+      ? 'You see the hero, workflow strip (Scan → Rank → A-Fix → Ship), capability list, and a getting-started checklist. Run the demo to unlock charts.'
+      : 'You see the hero, workflow strip (Scan → Rank → A-Fix → Ship), capability list, and a getting-started checklist. Run + New scan to unlock charts.';
+  }
+
+  window.AegisModules?.updateCloudDemoUi?.();
+}
+
+window.aegisIsProductionDeploy = isProductionDeploy;
+window.aegisHasRealCodeScan = hasRealCodeScan;
+window.aegisCloudDemoRepo = () => CLOUD_DEMO_REPO;
 
 function fixTime(severity) {
   if (severity === 'critical') return '30 min';
@@ -545,7 +625,7 @@ function renderOverviewCharts() {
   const sevChart = $('#severityBarChart');
   const sevMax = Math.max(m.crit, m.warn, m.info, 1);
   if (!m.hasData) {
-    sevChart.innerHTML = '<div class="chart-empty">Run a demo scan to populate severity breakdown</div>';
+    sevChart.innerHTML = `<div class="chart-empty">${chartEmptyMsg()}</div>`;
     $('#severityLegend').textContent = '';
   } else {
     const rows = [
@@ -573,7 +653,9 @@ function renderOverviewCharts() {
   } else {
     ring.style.strokeDashoffset = String(SCORE_RING_CIRC);
     ringVal.textContent = '—';
-    ringNote.textContent = 'Run a scan to calculate your score';
+    ringNote.textContent = shouldShowCodeDemo()
+      ? 'Run a scan to calculate your score'
+      : 'Run + New scan to calculate your score';
   }
 
   const repoChart = $('#repoBarChart');
@@ -612,7 +694,7 @@ function renderHomeChecklist() {
     || (currentScan?.findings ?? []).some((f) => f.fixed);
 
   const steps = {
-    demo: hasDemo || hasScan,
+    demo: !shouldShowCodeDemo() || hasDemo || hasScan,
     github: Boolean(githubUser?.connected),
     repo: hasRealScan,
     fix: hasFix,
@@ -629,19 +711,26 @@ function renderHomeChecklist() {
     connectBtn.textContent = githubUser?.connected ? 'Browse repositories' : 'Connect GitHub';
   }
   updateOverviewGuideSteps();
+  updateDemoUi();
 }
 
 function showHomeView() {
   $('#homeView').classList.remove('hidden');
   renderOverviewCharts();
+  const showDemo = shouldShowCodeDemo();
   setPageContext(
     'Overview',
     'Aegis Loop · Code',
-    githubUser?.connected
-      ? 'Run a demo or scan your repos — findings rank by severity with one-click A-Fix'
-      : 'Run the demo scan to see findings in under a minute — no GitHub required'
+    showDemo
+      ? (githubUser?.connected
+        ? 'Run a demo or scan your repos — findings rank by severity with one-click A-Fix'
+        : 'Run the demo scan to see findings in under a minute — no GitHub required')
+      : (githubUser?.connected
+        ? 'Scan repositories and pull requests — findings rank by severity with one-click A-Fix'
+        : 'Connect GitHub and run your first scan')
   );
   renderHomeChecklist();
+  updateDemoUi();
 }
 
 function updateOverviewGuideSteps() {
@@ -793,7 +882,7 @@ async function showFindingsView() {
       setPageContext(
         'Findings',
         'Aegis Loop · Code',
-        'No findings yet — run a demo or repository scan'
+        codeScanEmptyMsg(true)
       );
       renderFindingsTable([], { empty: 'no-scans' });
       history.replaceState(null, '', '/app/?view=findings');
@@ -1034,8 +1123,8 @@ function renderIntegrations() {
         <h3>SSO &amp; audit log</h3>
         <span class="status-pill soon">Enterprise</span>
       </div>
-      <p>SAML SSO and audit logging for regulated teams — contact sales for early access.</p>
-      <a href="mailto:sales@aegisloop.dev" class="btn-outline btn-sm">Contact sales</a>
+      <p>SAML SSO and audit logging for regulated teams — contact us for early access.</p>
+      <a href="mailto:${escapeHtml(healthInfo?.contactEmail ?? 'hello@aegisloop.dev')}" class="btn-outline btn-sm">Contact sales</a>
     </article>`;
 
   $('#integrationsConnectBtn')?.addEventListener('click', openAuthModal);
@@ -1146,12 +1235,16 @@ function renderSettings() {
   const ai = healthInfo?.ai?.configured;
   const osv = healthInfo?.osv?.enabled !== false;
   const oauth = healthInfo?.github?.oauth;
+  const prod = healthInfo?.production;
+  const contact = healthInfo?.contactEmail ?? 'hello@aegisloop.dev';
   scanner.innerHTML = `
     <ul class="settings-list">
       <li>Static analysis (secrets, injection, eval)</li>
       <li>OSV dependency scanning ${osv ? '— enabled' : '— unavailable'}</li>
       <li>AI autofix ${ai ? '— configured' : '— not configured on server'}</li>
       <li>GitHub OAuth ${oauth ? '— enabled' : '— use PAT instead'}</li>
+      <li>Deployment ${prod ? '— production' : '— local / development'}</li>
+      <li>Contact — <a href="mailto:${escapeHtml(contact)}">${escapeHtml(contact)}</a></li>
     </ul>`;
 
   updateThemeLabels();
@@ -1283,7 +1376,7 @@ function renderFindingsTable(findings, opts = {}) {
   if (!list.length) {
     let msg = 'No findings match your filter.';
     if (opts.empty === 'no-scans') {
-      msg = 'No findings yet. Run the demo scan or scan a repository to get started.';
+      msg = codeScanEmptyMsg();
     } else if (opts.empty === 'error') {
       msg = 'Could not load findings. Try refreshing the page.';
     } else if (!$('#findingsSearchInput')?.value.trim()) {
@@ -1723,7 +1816,7 @@ async function refreshHistory() {
     const ul = $('#scanHistory');
     ul.innerHTML = '';
     if (!scans.length) {
-      ul.innerHTML = '<li class="scan-history-empty">No scans yet — run the demo</li>';
+      ul.innerHTML = `<li class="scan-history-empty">${scanHistoryEmptyMsg()}</li>`;
     } else {
       scans.slice(0, 6).forEach((s) => {
         const li = document.createElement('li');
@@ -1742,6 +1835,7 @@ async function refreshHistory() {
       updateOverviewGuideSteps();
       window.AegisModules?.applyGuideVisibility?.('overview');
     }
+    updateDemoUi();
   } catch { /* offline */ }
 }
 
@@ -1927,6 +2021,7 @@ loadAuth().then(async () => {
   try {
     healthInfo = await api('/api/health');
     llmAvailable = Boolean(healthInfo.ai?.configured);
+    updateDemoUi();
     await api('/api/protect/sync', { method: 'POST' }).catch(() => {});
   } catch { /* offline */ }
 

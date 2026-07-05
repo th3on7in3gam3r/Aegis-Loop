@@ -70,6 +70,13 @@ async function setupOAuth() {
         toast('OAuth not configured — connect with a token instead');
       });
     }
+    if (health.production) {
+      const trustCard = document.querySelector('.login-right .trust-card');
+      const title = trustCard?.querySelector('h3');
+      const copy = trustCard?.querySelector('p');
+      if (title) title.textContent = 'Select accessible repos · Start scanning';
+      if (copy) copy.textContent = 'Choose which repositories Aegis Loop can scan, then run your first repository or PR scan.';
+    }
   } catch { /* ignore */ }
 }
 

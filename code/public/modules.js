@@ -9,6 +9,8 @@
   let protectRules = [];
   let protectEvents = [];
 
+  const CLOUD_DEMO_REPO = 'aegis-loop/cloud-demo';
+
   const MODULE_NAV = {
     code: 'navCodeModule',
     cloud: 'navCloudModule',
@@ -84,10 +86,10 @@
   }
 
   function updateCloudGuideSteps() {
-    const hasDemo = cloudScans.some((s) => s.repo === 'aegis-loop/cloud-demo');
-    const hasRepo = cloudScans.some((s) => s.repo && s.repo !== 'aegis-loop/cloud-demo');
+    const hasDemo = cloudScans.some((s) => s.repo === CLOUD_DEMO_REPO);
+    const hasRepo = hasRealCloudScan();
     markGuideSteps('cloudGuideSteps', {
-      demo: hasDemo || cloudScans.length > 0,
+      demo: !shouldShowCloudDemo() || hasDemo || cloudScans.length > 0,
       repo: hasRepo,
       fix: false,
       protect: protectRules.some((r) => r.findingRuleId),
@@ -112,6 +114,36 @@
       toggle: protectRules.some((r) => !r.enabled),
       test: protectEvents.length > 0 || (protectRules.some((r) => r.blocked > 0)),
     });
+  }
+
+  function hasRealCloudScan() {
+    return cloudScans.some(
+      (s) => s.status === 'complete' && s.repo && s.repo !== CLOUD_DEMO_REPO
+    );
+  }
+
+  function shouldShowCloudDemo() {
+    if (hasRealCloudScan()) return false;
+    if (window.aegisIsProductionDeploy?.()) return false;
+    return true;
+  }
+
+  function cloudScanEmptyMsg() {
+    return shouldShowCloudDemo()
+      ? 'Run a demo or scan a repo for Terraform, K8s, and Docker misconfigs'
+      : 'Scan repository IaC for Terraform, K8s, and Docker misconfigs';
+  }
+
+  function updateCloudDemoUi() {
+    const show = shouldShowCloudDemo();
+    const demoBtn = $('#cloudDemoBtn');
+    const scanBtn = $('#cloudScanOpenBtn');
+    demoBtn?.classList.toggle('hidden', !show);
+    $('#cloudGuideSteps [data-step="demo"]')?.classList.toggle('hidden', !show);
+    if (scanBtn) {
+      scanBtn.classList.toggle('btn-primary', !show);
+      scanBtn.classList.toggle('btn-outline', show);
+    }
   }
 
   function escapeHtml(s) {
@@ -193,12 +225,13 @@
           `${latest.repo} · ${latest.findings?.length ?? 0} finding(s) · score ${latest.stats?.score ?? '—'}`
         );
       } else {
-        renderModuleFindings($('#cloudFindingsList'), [], 'Run a demo or scan a repo for Terraform, K8s, and Docker misconfigs', 'cloud', '');
+        renderModuleFindings($('#cloudFindingsList'), [], cloudScanEmptyMsg(), 'cloud', '');
         window.aegisSetPageContext?.('Cloud posture', 'Aegis Loop / cloud', 'Scan IaC for public buckets, open security groups, and more');
       }
       await loadProtectData().catch(() => {});
       updateCloudGuideSteps();
       applyGuideVisibility('cloud');
+      updateCloudDemoUi();
       const hist = $('#cloudScanHistory');
       if (hist) {
         hist.innerHTML = scans.length
@@ -547,5 +580,6 @@
     applyGuideVisibility,
     revealGuide,
     updateShowGuideButtons,
+    updateCloudDemoUi,
   };
 })();

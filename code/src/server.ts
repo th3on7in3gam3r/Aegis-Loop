@@ -168,6 +168,9 @@ function resolveGithubToken(
 
 app.get('/api/health', async () => ({
   ok: true,
+  appUrl: config.appUrl,
+  production: !/localhost|127\.0\.0\.1/i.test(config.appUrl),
+  contactEmail: config.contactEmail,
   modules: {
     code: true,
     cloud: true,
@@ -231,12 +234,13 @@ app.get('/api/auth/github', async (_req, reply) => {
   if (!oauthConfigured()) {
     return reply.status(400).send({ error: 'GitHub OAuth not configured. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET.' });
   }
-  return reply.redirect(startOAuth());
+  return reply.redirect(startOAuth(reply));
 });
 
 app.get('/api/auth/github/callback', async (req, reply) => {
   const { code, state } = req.query as { code?: string; state?: string };
-  if (!code || !state || !consumeOAuthState(state)) {
+  if (!code || !state || !consumeOAuthState(req, reply, state)) {
+    req.log.warn({ hasCode: Boolean(code), hasState: Boolean(state) }, 'GitHub OAuth state validation failed');
     return reply.redirect('/login?auth=failed');
   }
 
@@ -244,7 +248,8 @@ app.get('/api/auth/github/callback', async (req, reply) => {
     const session = await exchangeCode(code);
     setSessionCookie(reply, session);
     return reply.redirect('/app/?auth=success');
-  } catch {
+  } catch (err) {
+    req.log.error({ err }, 'GitHub OAuth token exchange failed');
     return reply.redirect('/login?auth=failed');
   }
 });

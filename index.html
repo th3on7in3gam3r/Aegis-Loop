@@ -1360,17 +1360,17 @@
         <div class="contact-cards reveal">
           <div class="contact-card">
             <div class="contact-card-label">General</div>
-            <a href="mailto:hello@aegisloop.dev">hello@aegisloop.dev</a>
+            <a href="mailto:hello@aegisloop.dev" class="js-contact-email">hello@aegisloop.dev</a>
             <small>Product questions, partnerships, and press</small>
           </div>
           <div class="contact-card">
             <div class="contact-card-label">Sales</div>
-            <a href="mailto:sales@aegisloop.dev">sales@aegisloop.dev</a>
+            <a href="mailto:sales@aegisloop.dev" class="js-contact-email">sales@aegisloop.dev</a>
             <small>Team &amp; Enterprise plans, custom pricing</small>
           </div>
           <div class="contact-card">
             <div class="contact-card-label">Support</div>
-            <a href="mailto:support@aegisloop.dev">support@aegisloop.dev</a>
+            <a href="mailto:support@aegisloop.dev" class="js-contact-email">support@aegisloop.dev</a>
             <small>Help with scans, GitHub integration, or A-Fix</small>
           </div>
           <div class="contact-card">
@@ -1464,8 +1464,8 @@
         <ul>
           <li><a href="#about">About</a></li>
           <li><a href="#contact">Contact</a></li>
-          <li><a href="mailto:hello@aegisloop.dev">hello@aegisloop.dev</a></li>
-          <li><a href="mailto:sales@aegisloop.dev">sales@aegisloop.dev</a></li>
+          <li><a href="mailto:hello@aegisloop.dev" class="js-contact-email">hello@aegisloop.dev</a></li>
+          <li><a href="mailto:sales@aegisloop.dev" class="js-contact-email">sales@aegisloop.dev</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -1586,6 +1586,18 @@
       if (!data.connected) return;
       document.querySelectorAll('.nav-auth-only').forEach((el) => {
         el.hidden = false;
+      });
+    })
+    .catch(() => {});
+
+  fetch('/api/health')
+    .then((r) => r.json())
+    .then((health) => {
+      const email = health.contactEmail;
+      if (!email) return;
+      document.querySelectorAll('.js-contact-email').forEach((el) => {
+        el.href = `mailto:${email}`;
+        el.textContent = email;
       });
     })
     .catch(() => {});

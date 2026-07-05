@@ -1,4 +1,7 @@
+import { config } from './config.js';
+
 const GITHUB_REPO = 'https://github.com/th3on7in3gam3r/Aegis-Loop';
+const CONTACT_EMAIL = config.contactEmail;
 
 const FAQ = [
   {
@@ -123,9 +126,7 @@ ${FAQ.map((item) => `### ${item.question}\n${item.answer}`).join('\n\n')}
 
 ## Contact
 
-- hello@aegisloop.dev — general inquiries
-- sales@aegisloop.dev — team and enterprise
-- support@aegisloop.dev — integration help
+- ${CONTACT_EMAIL} — general inquiries, sales, and support
 
 ## Optional
 
@@ -145,7 +146,7 @@ export function structuredDataJson(base: string): string {
       contactPoint: {
         '@type': 'ContactPoint',
         contactType: 'customer support',
-        email: 'support@aegisloop.dev',
+        email: CONTACT_EMAIL,
       },
     },
     {
