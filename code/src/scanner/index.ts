@@ -84,6 +84,7 @@ export async function scanDirectory(
 
   return {
     id: scanId,
+    module: 'code',
     repo: repoLabel,
     branch,
     status: 'complete',

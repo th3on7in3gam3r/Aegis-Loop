@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import type { ScanResult } from './types.js';
+import { config } from './config.js';
 
-const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), '../data');
+const DATA_DIR = config.dataDir;
 const STORE_FILE = join(DATA_DIR, 'scans.json');
 
 const scans = new Map<string, ScanResult>();
@@ -36,10 +36,12 @@ export function getScan(id: string): ScanResult | undefined {
   return scans.get(id);
 }
 
-export function listScans(): ScanResult[] {
-  return [...scans.values()].sort(
-    (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
-  );
+export function listScans(module?: import('./types.js').AegisModule): ScanResult[] {
+  return [...scans.values()]
+    .filter((s) => !module || (s.module ?? 'code') === module)
+    .sort(
+      (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+    );
 }
 
 export function updateScanMeta(

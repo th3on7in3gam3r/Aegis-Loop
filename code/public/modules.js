@@ -1,0 +1,551 @@
+/** Aegis Loop — Cloud, Attack, Protect module UI */
+(() => {
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => document.querySelectorAll(sel);
+
+  let activeModule = 'code';
+  let cloudScans = [];
+  let attackScans = [];
+  let protectRules = [];
+  let protectEvents = [];
+
+  const MODULE_NAV = {
+    code: 'navCodeModule',
+    cloud: 'navCloudModule',
+    attack: 'navAttackModule',
+    protect: 'navProtectModule',
+  };
+
+  const GUIDE_STORAGE_KEY = 'aegis-guide-dismiss';
+
+  function guideDismissState() {
+    try {
+      return JSON.parse(localStorage.getItem(GUIDE_STORAGE_KEY) || '{}');
+    } catch {
+      return {};
+    }
+  }
+
+  function isGuideDismissed(mod) {
+    return guideDismissState()[mod] === true;
+  }
+
+  function dismissGuide(mod) {
+    const state = guideDismissState();
+    state[mod] = true;
+    localStorage.setItem(GUIDE_STORAGE_KEY, JSON.stringify(state));
+    applyGuideVisibility(mod);
+  }
+
+  function revealGuide(mod) {
+    const state = guideDismissState();
+    delete state[mod];
+    localStorage.setItem(GUIDE_STORAGE_KEY, JSON.stringify(state));
+    applyGuideVisibility(mod);
+    scrollToGuide(mod);
+  }
+
+  function showGuideBtnId(mod) {
+    return `show${mod.charAt(0).toUpperCase()}${mod.slice(1)}Guide`;
+  }
+
+  function applyGuideVisibility(mod) {
+    const guide = document.getElementById(`${mod}Guide`);
+    if (guide) guide.classList.toggle('hidden', isGuideDismissed(mod));
+    updateShowGuideButtons();
+  }
+
+  function updateShowGuideButtons() {
+    ['overview', 'cloud', 'attack', 'protect'].forEach((mod) => {
+      const btn = document.getElementById(showGuideBtnId(mod));
+      if (!btn) return;
+      const dismissed = isGuideDismissed(mod);
+      let visible = dismissed;
+      if (mod === 'overview') {
+        visible = dismissed && activeModule === 'code' && (window.aegisIsCodeFeedView?.() ?? false);
+      } else {
+        visible = dismissed && activeModule === mod;
+      }
+      btn.classList.toggle('visible', visible);
+    });
+  }
+
+  function scrollToGuide(mod) {
+    document.getElementById(`${mod}Guide`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function markGuideSteps(listId, steps) {
+    const list = document.getElementById(listId);
+    if (!list) return;
+    list.querySelectorAll('li[data-step]').forEach((li) => {
+      const done = Boolean(steps[li.dataset.step]);
+      li.classList.toggle('done', done);
+    });
+  }
+
+  function updateCloudGuideSteps() {
+    const hasDemo = cloudScans.some((s) => s.repo === 'aegis-loop/cloud-demo');
+    const hasRepo = cloudScans.some((s) => s.repo && s.repo !== 'aegis-loop/cloud-demo');
+    markGuideSteps('cloudGuideSteps', {
+      demo: hasDemo || cloudScans.length > 0,
+      repo: hasRepo,
+      fix: false,
+      protect: protectRules.some((r) => r.findingRuleId),
+    });
+  }
+
+  function updateAttackGuideSteps() {
+    markGuideSteps('attackGuideSteps', {
+      url: attackScans.length > 0,
+      probe: attackScans.some((s) => s.status === 'complete'),
+      fix: false,
+      protect: protectRules.some((r) => r.findingRuleId),
+    });
+  }
+
+  function updateProtectGuideSteps() {
+    const hasOtherScans = cloudScans.length > 0 || attackScans.length > 0
+      || (window.aegisHasCodeScans?.() ?? false);
+    markGuideSteps('protectGuideSteps', {
+      scan: hasOtherScans,
+      sync: protectRules.some((r) => r.source !== 'builtin'),
+      toggle: protectRules.some((r) => !r.enabled),
+      test: protectEvents.length > 0 || (protectRules.some((r) => r.blocked > 0)),
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function sevClass(sev) {
+    return sev === 'critical' ? 'sev-critical' : sev === 'warning' ? 'sev-warning' : 'sev-info';
+  }
+
+  function sevLabel(sev) {
+    return sev === 'critical' ? 'Critical' : sev === 'warning' ? 'High' : 'Info';
+  }
+
+  function renderModuleFindings(tbody, findings, emptyMsg, module, scanId) {
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (!findings.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="repos-loading">${emptyMsg}</td></tr>`;
+      return;
+    }
+    for (const f of findings) {
+      const tr = document.createElement('tr');
+      const guideBtn = module && scanId
+        ? `<button type="button" class="btn-sm-outline fix-guide-btn" data-id="${escapeHtml(f.id)}" data-scan="${escapeHtml(scanId)}" data-module="${module}">Fix guide</button>`
+        : '';
+      tr.innerHTML = `
+        <td><strong>${escapeHtml(f.title)}</strong><br><small style="color:var(--text-3)">${escapeHtml(f.message)}</small></td>
+        <td><span class="branch-tag">${escapeHtml(f.file)}${f.line ? `:${f.line}` : ''}</span></td>
+        <td><span class="sev-badge ${sevClass(f.severity)}">${sevLabel(f.severity)}</span></td>
+        <td><span class="branch-tag">${escapeHtml(f.ruleId)}</span></td>
+        <td>${guideBtn}</td>`;
+      tbody.appendChild(tr);
+    }
+    tbody.querySelectorAll('.fix-guide-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        window.aegisOpenFixGuide?.(btn.dataset.id, btn.dataset.scan, btn.dataset.module);
+      });
+    });
+  }
+
+  function updateModuleKpis(prefix, scan) {
+    const stats = scan?.stats;
+    $(`#${prefix}Crit`) && (document.getElementById(`${prefix}Crit`).textContent = stats?.critical ?? '0');
+    $(`#${prefix}Warn`) && (document.getElementById(`${prefix}Warn`).textContent = stats?.warning ?? '0');
+    $(`#${prefix}Info`) && (document.getElementById(`${prefix}Info`).textContent = stats?.info ?? '0');
+    $(`#${prefix}Score`) && (document.getElementById(`${prefix}Score`).textContent = stats?.score ?? '—');
+  }
+
+  async function loadCloudScans() {
+    cloudScans = await window.aegisApi('/api/cloud/scans');
+    return cloudScans;
+  }
+
+  async function loadAttackScans() {
+    attackScans = await window.aegisApi('/api/attack/scans');
+    return attackScans;
+  }
+
+  async function loadProtectData() {
+    const data = await window.aegisApi('/api/protect/rules');
+    protectRules = data.rules ?? [];
+    const ev = await window.aegisApi('/api/protect/events');
+    protectEvents = ev.events ?? [];
+    return data;
+  }
+
+  async function renderCloudView() {
+    $('#cloudView')?.classList.remove('hidden');
+    try {
+      const scans = await loadCloudScans();
+      const latest = scans[0];
+      if (latest?.status === 'complete') {
+        updateModuleKpis('cloudStat', latest);
+        renderModuleFindings($('#cloudFindingsList'), latest.findings ?? [], 'No misconfigurations found', 'cloud', latest.id);
+        window.aegisSetPageContext?.(
+          'Cloud posture',
+          'Aegis Loop / cloud',
+          `${latest.repo} · ${latest.findings?.length ?? 0} finding(s) · score ${latest.stats?.score ?? '—'}`
+        );
+      } else {
+        renderModuleFindings($('#cloudFindingsList'), [], 'Run a demo or scan a repo for Terraform, K8s, and Docker misconfigs', 'cloud', '');
+        window.aegisSetPageContext?.('Cloud posture', 'Aegis Loop / cloud', 'Scan IaC for public buckets, open security groups, and more');
+      }
+      await loadProtectData().catch(() => {});
+      updateCloudGuideSteps();
+      applyGuideVisibility('cloud');
+      const hist = $('#cloudScanHistory');
+      if (hist) {
+        hist.innerHTML = scans.length
+          ? scans.slice(0, 8).map((s) =>
+              `<li data-id="${escapeHtml(s.id)}">${escapeHtml(s.repo)}<small>${s.stats?.critical ?? 0}c · ${s.stats?.warning ?? 0}h</small></li>`
+            ).join('')
+          : '<li class="scan-history-empty">No cloud scans yet</li>';
+        hist.querySelectorAll('li[data-id]').forEach((li) => {
+          li.addEventListener('click', async () => {
+            const scan = await window.aegisApi(`/api/cloud/scans/${li.dataset.id}`);
+            updateModuleKpis('cloudStat', scan);
+            renderModuleFindings($('#cloudFindingsList'), scan.findings ?? [], 'No findings', 'cloud', scan.id);
+          });
+        });
+      }
+    } catch (e) {
+      window.aegisToast?.(e.message || 'Could not load cloud scans');
+    }
+  }
+
+  async function renderAttackView() {
+    $('#attackView')?.classList.remove('hidden');
+    try {
+      const scans = await loadAttackScans();
+      const latest = scans[0];
+      if (latest?.status === 'complete') {
+        updateModuleKpis('attackStat', latest);
+        renderModuleFindings($('#attackFindingsList'), latest.findings ?? [], 'No issues detected', 'attack', latest.id);
+        window.aegisSetPageContext?.(
+          'Offensive testing',
+          'Aegis Loop / attack',
+          `${latest.target ?? latest.repo} · score ${latest.stats?.score ?? '—'}`
+        );
+      } else if (latest?.status === 'failed') {
+        renderModuleFindings($('#attackFindingsList'), [], latest.error || 'Probe failed', 'attack', latest.id);
+      } else {
+        renderModuleFindings($('#attackFindingsList'), [], 'Probe a URL to check headers, HTTPS, and surface exposure', 'attack', '');
+        window.aegisSetPageContext?.('Offensive testing', 'Aegis Loop / attack', 'Safe passive probes — no destructive exploits');
+      }
+      const hist = $('#attackScanHistory');
+      if (hist) {
+        hist.innerHTML = scans.length
+          ? scans.slice(0, 8).map((s) =>
+              `<li data-id="${escapeHtml(s.id)}">${escapeHtml(s.target ?? s.repo)}<small>${s.stats?.critical ?? 0}c</small></li>`
+            ).join('')
+          : '<li class="scan-history-empty">No probes yet</li>';
+        hist.querySelectorAll('li[data-id]').forEach((li) => {
+          li.addEventListener('click', async () => {
+            const scan = await window.aegisApi(`/api/attack/scans/${li.dataset.id}`);
+            updateModuleKpis('attackStat', scan);
+            renderModuleFindings($('#attackFindingsList'), scan.findings ?? [], 'No findings', 'attack', scan.id);
+          });
+        });
+      }
+      await loadProtectData().catch(() => {});
+      updateAttackGuideSteps();
+      applyGuideVisibility('attack');
+    } catch (e) {
+      window.aegisToast?.(e.message || 'Could not load attack scans');
+    }
+  }
+
+  async function renderProtectView() {
+    $('#protectView')?.classList.remove('hidden');
+    try {
+      const data = await loadProtectData();
+      const stats = data.stats ?? {};
+      $('#protectStatRules').textContent = stats.rules ?? '0';
+      $('#protectStatEnabled').textContent = stats.enabled ?? '0';
+      $('#protectStatBlocked').textContent = stats.blocked ?? '0';
+
+      const rulesBody = $('#protectRulesList');
+      if (rulesBody) {
+        rulesBody.innerHTML = protectRules.length
+          ? protectRules.map((r) => `
+              <tr>
+                <td><strong>${escapeHtml(r.title)}</strong><br><small>${escapeHtml(r.description)}</small></td>
+                <td><span class="branch-tag">${escapeHtml(r.source)}</span></td>
+                <td><code class="protect-pattern">${escapeHtml(r.pattern.slice(0, 48))}${r.pattern.length > 48 ? '…' : ''}</code></td>
+                <td>${r.blocked}</td>
+                <td>
+                  <button type="button" class="btn-sm-outline protect-toggle" data-id="${escapeHtml(r.id)}" data-enabled="${r.enabled ? '0' : '1'}">
+                    ${r.enabled ? 'Disable' : 'Enable'}
+                  </button>
+                </td>
+              </tr>`).join('')
+          : '<tr><td colspan="5" class="repos-loading">Sync rules from Code, Cloud, and Attack findings</td></tr>';
+
+        rulesBody.querySelectorAll('.protect-toggle').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            await window.aegisApi(`/api/protect/rules/${btn.dataset.id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ enabled: btn.dataset.enabled === '1' }),
+            });
+            await renderProtectView();
+            window.aegisToast?.('Rule updated');
+          });
+        });
+      }
+
+      const eventsBody = $('#protectEventsList');
+      if (eventsBody) {
+        eventsBody.innerHTML = protectEvents.length
+          ? protectEvents.slice(0, 20).map((e) => `
+              <tr>
+                <td><span class="branch-tag">${escapeHtml(e.method)}</span> ${escapeHtml(e.path)}</td>
+                <td>${escapeHtml(e.detail)}</td>
+                <td><span class="branch-tag">${escapeHtml(e.ruleId)}</span></td>
+                <td>${new Date(e.blockedAt).toLocaleString()}</td>
+              </tr>`).join('')
+          : '<tr><td colspan="4" class="repos-loading">No blocked requests yet — WAF is active on this dashboard</td></tr>';
+      }
+
+      window.aegisSetPageContext?.(
+        'Runtime firewall',
+        'Aegis Loop / protect',
+        `${stats.enabled ?? 0} rules active · ${stats.blocked ?? 0} blocks · live on /app and /api`
+      );
+      await Promise.all([loadCloudScans(), loadAttackScans()]).catch(() => {});
+      updateProtectGuideSteps();
+      applyGuideVisibility('protect');
+    } catch (e) {
+      window.aegisToast?.(e.message || 'Could not load protect rules');
+    }
+  }
+
+  function hideModuleViews() {
+    ['cloudView', 'attackView', 'protectView'].forEach((id) => {
+      $(`#${id}`)?.classList.add('hidden');
+    });
+  }
+
+  function setModuleNav(moduleId) {
+    Object.entries(MODULE_NAV).forEach(([mod, navId]) => {
+      $(`#${navId}`)?.classList.toggle('hidden', mod !== moduleId);
+    });
+    $$('.module-pill').forEach((pill) => {
+      const on = pill.dataset.module === moduleId;
+      pill.classList.toggle('active', on);
+      pill.classList.remove('module-soon');
+      pill.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
+
+  async function switchModule(moduleId) {
+    activeModule = moduleId;
+    setModuleNav(moduleId);
+    hideModuleViews();
+    window.aegisHideAllPanels?.();
+
+    if (moduleId === 'code') {
+      window.aegisShowFeedView?.();
+      updateShowGuideButtons();
+      return;
+    }
+
+    $$('.nav-item').forEach((n) => n.classList.remove('active'));
+    $('#statsStrip')?.classList.add('hidden');
+    $('#overviewCharts')?.classList.add('hidden');
+
+    if (moduleId === 'cloud') {
+      await renderCloudView();
+    } else if (moduleId === 'attack') {
+      await renderAttackView();
+    } else if (moduleId === 'protect') {
+      await renderProtectView();
+    }
+
+    history.replaceState(null, '', `/app/?module=${moduleId}`);
+    updateShowGuideButtons();
+  }
+
+  async function runCloudDemo() {
+    const btn = $('#cloudDemoBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Scanning…'; }
+    try {
+      await window.aegisApi('/api/cloud/scans/demo', { method: 'POST' });
+      await renderCloudView();
+      window.aegisToast?.('Cloud demo scan complete');
+    } catch (e) {
+      window.aegisToast?.(e.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Run demo scan'; }
+    }
+  }
+
+  async function runCloudRepoScan() {
+    const repo = $('#cloudRepoInput')?.value.trim();
+    if (!repo) return window.aegisToast?.('Enter a repository');
+    const btn = $('#cloudScanBtn');
+    if (btn) btn.disabled = true;
+    try {
+      await window.aegisApi('/api/cloud/scans', {
+        method: 'POST',
+        body: JSON.stringify({ repo, branch: $('#cloudBranchInput')?.value.trim() || 'main' }),
+      });
+      $('#cloudScanModal')?.classList.add('hidden');
+      await renderCloudView();
+      window.aegisToast?.('Cloud scan complete');
+    } catch (e) {
+      window.aegisToast?.(e.message);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function runAttackProbe() {
+    const raw = $('#attackTargetInput')?.value.trim();
+    if (!raw) return window.aegisToast?.('Enter at least one URL');
+    const lines = raw.split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
+    const btn = $('#attackProbeBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Probing…'; }
+    try {
+      const body = lines.length > 1 ? { targets: lines } : { target: lines[0] };
+      const res = await window.aegisApi('/api/attack/scans', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      $('#attackProbeModal')?.classList.add('hidden');
+      await renderAttackView();
+      const count = res.scans?.length ?? 1;
+      window.aegisToast?.(count > 1 ? `${count} probes complete` : 'Surface probe complete');
+    } catch (e) {
+      window.aegisToast?.(e.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Run probe(s)'; }
+    }
+  }
+
+  async function exportProtectRules() {
+    try {
+      const res = await fetch(`${window.location.origin}/api/protect/rules/export`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'aegis-protect-rules.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      window.aegisToast?.('Rules exported');
+    } catch (e) {
+      window.aegisToast?.(e.message || 'Could not export rules');
+    }
+  }
+
+  async function syncProtectRules() {
+    const btn = $('#protectSyncBtn');
+    if (btn) btn.disabled = true;
+    try {
+      await window.aegisApi('/api/protect/sync', { method: 'POST' });
+      await renderProtectView();
+      window.aegisToast?.('Rules synced from Code, Cloud, and Attack findings');
+    } catch (e) {
+      window.aegisToast?.(e.message);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function demoProtectBlock() {
+    try {
+      const res = await window.aegisApi('/api/protect/demo', {
+        method: 'POST',
+        body: JSON.stringify({ payload: "' OR 1=1 --" }),
+      });
+      window.aegisToast?.(res.blocked ? 'Blocked by Protect' : res.message);
+    } catch (e) {
+      window.aegisToast?.('Blocked by Protect — rule matched');
+      await renderProtectView();
+    }
+  }
+
+  function bindModuleEvents() {
+    $('#cloudDemoBtn')?.addEventListener('click', runCloudDemo);
+    $('#cloudScanOpenBtn')?.addEventListener('click', () => $('#cloudScanModal')?.classList.remove('hidden'));
+    $('#cloudScanBtn')?.addEventListener('click', (e) => { e.preventDefault(); runCloudRepoScan(); });
+    $$('[data-close-cloud-scan]').forEach((el) => el.addEventListener('click', () => $('#cloudScanModal')?.classList.add('hidden')));
+    $('#attackProbeOpenBtn')?.addEventListener('click', () => $('#attackProbeModal')?.classList.remove('hidden'));
+    $('#attackProbeBtn')?.addEventListener('click', (e) => { e.preventDefault(); runAttackProbe(); });
+    $$('[data-close-attack-probe]').forEach((el) => el.addEventListener('click', () => $('#attackProbeModal')?.classList.add('hidden')));
+    $('#navCloudScan')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      $('#cloudScanModal')?.classList.remove('hidden');
+    });
+    $('#navAttackProbe')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      $('#attackProbeModal')?.classList.remove('hidden');
+    });
+    $('#navCloudPosture')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      renderCloudView();
+    });
+    $('#navAttackSurface')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      renderAttackView();
+    });
+    $('#navProtectRules')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      renderProtectView();
+    });
+    $('#navProtectEvents')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      renderProtectView();
+      document.getElementById('protectEventsList')?.scrollIntoView({ behavior: 'smooth' });
+    });
+    $('#protectSyncBtn')?.addEventListener('click', syncProtectRules);
+    $('#protectExportBtn')?.addEventListener('click', exportProtectRules);
+    $('#protectDemoBtn')?.addEventListener('click', demoProtectBlock);
+
+    $$('.module-guide-dismiss').forEach((btn) => {
+      btn.addEventListener('click', () => dismissGuide(btn.dataset.guide));
+    });
+    $$('.module-show-guide').forEach((btn) => {
+      btn.addEventListener('click', () => revealGuide(btn.dataset.guide));
+    });
+    $('#navCloudGuide')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      revealGuide('cloud');
+    });
+    $('#navAttackGuide')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      revealGuide('attack');
+    });
+    $('#navProtectGuide')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      revealGuide('protect');
+    });
+    $$('.module-guide-doc-link').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const section = link.dataset.docsSection;
+        window.aegisShowDocsView?.(section);
+      });
+    });
+
+    ['overview', 'cloud', 'attack', 'protect'].forEach((mod) => applyGuideVisibility(mod));
+  }
+
+  window.AegisModules = {
+    switchModule,
+    getActiveModule: () => activeModule,
+    hideModuleViews,
+    bindModuleEvents,
+    renderProtectView,
+    applyGuideVisibility,
+    revealGuide,
+    updateShowGuideButtons,
+  };
+})();

@@ -3,6 +3,7 @@ services:
     name: aegis-loop
     runtime: node
     branch: main
+    plan: starter
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
@@ -20,3 +21,9 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
+      - key: AEGIS_DATA_DIR
+        value: /opt/render/project/src/code/data
+    disk:
+      name: aegis-data
+      mountPath: /opt/render/project/src/code/data
+      sizeGB: 1

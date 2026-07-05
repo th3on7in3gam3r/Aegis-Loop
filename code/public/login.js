@@ -84,3 +84,9 @@ $('#patInput').addEventListener('keydown', (e) => {
 
 checkAuth();
 setupOAuth();
+
+const loginParams = new URLSearchParams(window.location.search);
+if (loginParams.get('auth') === 'failed') {
+  toast('GitHub sign-in failed — try again or use a personal access token');
+  history.replaceState(null, '', '/login');
+}

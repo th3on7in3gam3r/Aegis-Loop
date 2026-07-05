@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — Aegis Loop</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -27,61 +29,127 @@
           </span>
           <span class="logo-text">Aegis Loop</span>
         </a>
-        <span class="module-tag">Code</span>
       </div>
 
       <div id="sidebarUser" class="sidebar-user-card">Not connected</div>
 
-      <nav class="nav-menu">
-        <span class="nav-section-label">Workspace</span>
-        <a href="#" class="nav-item active" id="navFeed">
-          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg></span>
-          Security feed
+      <div class="sidebar-stats" id="sidebarStats" aria-label="Workspace summary">
+        <div class="sidebar-stat">
+          <span class="sidebar-stat-val" id="sidebarStatRepos">—</span>
+          <span class="sidebar-stat-label">Repos</span>
+        </div>
+        <div class="sidebar-stat">
+          <span class="sidebar-stat-val" id="sidebarStatOpen">—</span>
+          <span class="sidebar-stat-label">Open</span>
+        </div>
+        <div class="sidebar-stat">
+          <span class="sidebar-stat-val" id="sidebarStatScore">—</span>
+          <span class="sidebar-stat-label">Score</span>
+        </div>
+      </div>
+
+      <div class="module-switcher" role="tablist" aria-label="Aegis Loop modules">
+        <button type="button" class="module-pill active" data-module="code" aria-selected="true">Code</button>
+        <button type="button" class="module-pill" data-module="cloud">Cloud</button>
+        <button type="button" class="module-pill" data-module="attack">Attack</button>
+        <button type="button" class="module-pill" data-module="protect">Protect</button>
+      </div>
+
+      <nav class="nav-menu hidden" id="navCloudModule">
+        <span class="nav-section-label">Cloud posture</span>
+        <a href="#" class="nav-item active" id="navCloudPosture">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 11c0-3 2.5-5.5 5.5-5.5.5-2 2.5-3.5 4.5-3.5 2.5 0 4.5 2 4.5 4.5"/><path d="M2 11h12"/></svg></span>
+          Posture
         </a>
+        <span class="nav-section-label">Scan</span>
+        <a href="#" class="nav-item" id="navCloudScan">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 3v10M3 8h10"/></svg></span>
+          Scan IaC
+        </a>
+        <span class="nav-section-label">Help</span>
+        <a href="#" class="nav-item sub" id="navCloudGuide">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/><path d="M8 7v4M8 5.5v.5"/></svg></span>
+          How to use Cloud
+        </a>
+      </nav>
+
+      <nav class="nav-menu hidden" id="navAttackModule">
+        <span class="nav-section-label">Offensive</span>
+        <a href="#" class="nav-item active" id="navAttackSurface">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5"/><path d="M8 5v3l2 2"/></svg></span>
+          Surface
+        </a>
+        <a href="#" class="nav-item" id="navAttackProbe">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 8h12M8 2l6 6-6 6"/></svg></span>
+          Probe URL
+        </a>
+        <span class="nav-section-label">Help</span>
+        <a href="#" class="nav-item sub" id="navAttackGuide">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/><path d="M8 7v4M8 5.5v.5"/></svg></span>
+          How to use Attack
+        </a>
+      </nav>
+
+      <nav class="nav-menu hidden" id="navProtectModule">
+        <span class="nav-section-label">Runtime</span>
+        <a href="#" class="nav-item active" id="navProtectRules">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5l5 2v4c0 3-2 5-5 6.5C5 12.5 3 10.5 3 7.5v-4l5-2z"/></svg></span>
+          WAF rules
+        </a>
+        <a href="#" class="nav-item" id="navProtectEvents">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 3.5h10v9H3z"/><path d="M6 7h4"/></svg></span>
+          Block log
+        </a>
+        <span class="nav-section-label">Help</span>
+        <a href="#" class="nav-item sub" id="navProtectGuide">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/><path d="M8 7v4M8 5.5v.5"/></svg></span>
+          How to use Protect
+        </a>
+      </nav>
+
+      <nav class="nav-menu" id="navCodeModule">
+        <span class="nav-section-label">Monitor</span>
+        <a href="#" class="nav-item active" id="navFeed">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 12V6l6-3.5L14 6v6l-6 3.5L2 12z"/><path d="M8 2.5V9M2 6l6 3.5L14 6"/></svg></span>
+          Overview
+        </a>
+        <a href="#" class="nav-item" id="navFindings">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 3.5h11v9h-11z"/><path d="M5 7h6M5 9.5h4"/></svg></span>
+          Findings <span class="nav-count nav-count-alert hidden" id="findingsCount">0</span>
+        </a>
+
+        <span class="nav-section-label">Remediate</span>
         <a href="#" class="nav-item" id="navAutofix">
           <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M9 1.5L4.5 8.5H8L7 14.5l5.5-7.5H10l1-5.5z"/></svg></span>
-          A-Fix
+          A-Fix queue <span class="nav-count hidden" id="autofixCount">0</span>
+        </a>
+        <a href="#" class="nav-item" id="navPR">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="4.5" cy="4" r="1.5"/><circle cx="4.5" cy="12" r="1.5"/><circle cx="11.5" cy="8" r="1.5"/><path d="M4.5 5.5v5.5M4.5 8c0 1.8 3.5 1.8 3.5 3.5v.5"/></svg></span>
+          Pull requests
+        </a>
+
+        <span class="nav-section-label">Coverage</span>
+        <a href="#" class="nav-item" id="navRepos">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="5" cy="4" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="11" cy="7.5" r="1.5"/><path d="M5 5.5v5.5M5 7.5c0 1.8 3 1.8 3 3.5v1.5"/></svg></span>
+          Repositories <span class="nav-count" id="repoCount">—</span>
+        </a>
+        <a href="#" class="nav-item" id="navScanners">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5l5.5 2v4.5c0 3.2-2.2 5.2-5.5 6.5C4.7 13.2 2.5 11.2 2.5 8V3.5L8 1.5z"/><path d="M6 8l1.5 1.5L10.5 6"/></svg></span>
+          Scanners
+        </a>
+        <span class="nav-section-label">Help</span>
+        <a href="#" class="nav-item sub" id="navOverviewGuide">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/><path d="M8 7v4M8 5.5v.5"/></svg></span>
+          How to use Overview
         </a>
       </nav>
 
       <div class="nav-section">
-        <span class="nav-section-label">Assets</span>
-        <a href="#" class="nav-item sub" id="navRepos">
-          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="5" cy="4" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="11" cy="7.5" r="1.5"/><path d="M5 5.5v5.5M5 7.5c0 1.8 3 1.8 3 3.5v1.5"/></svg></span>
-          Repositories <span class="nav-count" id="repoCount">—</span>
+        <span class="nav-section-label">Workspace</span>
+        <a href="#" class="nav-item sub" id="navIntegrations">
+          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 2.5h4v3H6zM2.5 10.5h4v3h-4zM9.5 10.5h4v3h-4z"/><path d="M8 5.5v2M4.5 10.5V8.5M11.5 10.5V8.5"/></svg></span>
+          Integrations
         </a>
-        <a href="#" class="nav-item sub disabled">
-          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12.5 11H4.5a2.5 2.5 0 010-5 3.5 3.5 0 016.8-1.1A2.5 2.5 0 0112.5 11z"/></svg></span>
-          Clouds <span class="nav-count">0</span>
-        </a>
-        <a href="#" class="nav-item sub disabled">
-          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/><path d="M2.5 8h11M8 2.5c1.8 1.5 3 3.5 3 5.5s-1.2 4-3 5.5c-1.8-1.5-3-3.5-3-5.5s1.2-4 3-5.5z"/></svg></span>
-          Domains <span class="nav-count">0</span>
-        </a>
-      </div>
-
-      <div class="nav-section">
-        <span class="nav-section-label">Platform</span>
-        <a href="#" class="nav-item sub active-module">
-          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6 3.5L2.5 8l3.5 4.5M10 3.5l3.5 4.5L10 12"/></svg></span>
-          Code
-        </a>
-        <a href="#" class="nav-item sub disabled">
-          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12.5 11H4.5a2.5 2.5 0 010-5 3.5 3.5 0 016.8-1.1A2.5 2.5 0 0112.5 11z"/></svg></span>
-          Cloud
-        </a>
-        <a href="#" class="nav-item sub disabled">
-          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/><path d="M8 8l3.5-3.5M8 2.5v1.5"/></svg></span>
-          Attack
-        </a>
-        <a href="#" class="nav-item sub disabled">
-          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 1.5L2.5 4v3.5c0 3 2.5 5 5.5 6.5 3-1.5 5.5-3.5 5.5-6.5V4L8 1.5z"/></svg></span>
-          Protect
-        </a>
-      </div>
-
-      <div class="nav-section">
-        <span class="nav-section-label">Help</span>
         <a href="#" class="nav-item sub" id="navDocs">
           <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 2.5h7l3 3V13a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5a1 1 0 011-1z"/><path d="M10 2.5V5.5h3"/><path d="M5 8h6M5 10.5h6"/></svg></span>
           Documentation
@@ -91,6 +159,16 @@
           Settings
         </a>
       </div>
+
+      <a href="/#pricing" class="sidebar-upgrade" target="_blank" rel="noopener">
+        <span class="sidebar-upgrade-tier">Free plan</span>
+        <span class="sidebar-upgrade-cta">All four modules included →</span>
+      </a>
+
+      <button type="button" class="module-show-guide" id="showOverviewGuide" data-guide="overview">Show Overview guide</button>
+      <button type="button" class="module-show-guide" id="showCloudGuide" data-guide="cloud">Show Cloud guide</button>
+      <button type="button" class="module-show-guide" id="showAttackGuide" data-guide="attack">Show Attack guide</button>
+      <button type="button" class="module-show-guide" id="showProtectGuide" data-guide="protect">Show Protect guide</button>
 
       <div class="nav-section nav-bottom">
         <span class="nav-section-label">Recent scans</span>
@@ -106,9 +184,9 @@
     <div class="shell-main">
       <header class="app-header">
         <div class="header-left">
-          <p class="page-eyebrow" id="pageBreadcrumb">Aegis Loop · Code security</p>
+          <p class="page-eyebrow" id="pageBreadcrumb">Aegis Loop · Code</p>
           <div class="header-title-row">
-            <h1 id="pageTitle">Security feed</h1>
+            <h1 id="pageTitle">Overview</h1>
             <span class="header-sub" id="scanMeta">Run a scan to see findings</span>
           </div>
         </div>
@@ -123,7 +201,84 @@
       </header>
 
       <main class="feed-main">
+        <div id="overviewGuideWrap">
+          <section class="module-guide" id="overviewGuide">
+            <div class="module-guide-head">
+              <div>
+                <span class="module-guide-eyebrow">How to use Overview</span>
+                <h2>Your security command center for code</h2>
+                <p class="module-guide-lead"><strong>What is this?</strong> Overview is the home screen of the Code module. It shows how healthy your repositories are at a glance — how many critical issues you have, your average security score, which repos need attention, and how much you have already fixed. Before your first scan you will see a getting-started hero; after scanning, KPI cards and charts replace it.</p>
+                <p class="module-guide-lead"><strong>Why it matters:</strong> You do not need to open every repo to know where risk lives. Overview rolls up the <em>latest scan per repository</em> so one number tells you if you are improving or slipping. Use it in standups, before releases, or when onboarding a new engineer.</p>
+                <p class="module-guide-lead"><strong>When to use it:</strong> Start here every session. Scan from <em>+ New scan</em> or Repositories, then return to Overview to see the workspace picture change. Drill into <em>Findings</em> for the full list or <em>A-Fix queue</em> to remediate.</p>
+              </div>
+              <button type="button" class="btn-ghost btn-sm module-guide-dismiss" data-guide="overview">Hide guide</button>
+            </div>
+            <div class="module-guide-flow">
+              <span>Overview</span> (big picture) → <span>Findings</span> (every issue) → <span>A-Fix</span> (patch) → <span>PR</span> (ship)
+            </div>
+            <ol class="module-guide-steps" id="overviewGuideSteps">
+              <li data-step="demo"><span class="guide-step-num">1</span><div><strong>Run your first scan</strong><span>Click <em>Run demo scan</em> on the hero below, or <em>+ New scan</em> in the header for your own repo. Until you scan, charts stay empty — that is normal.</span></div></li>
+              <li data-step="kpi"><span class="guide-step-num">2</span><div><strong>Read the KPI strip</strong><span>After scanning, five cards appear: <em>Critical</em>, <em>High</em>, <em>Fixed</em>, <em>Security score</em>, and <em>Repos scanned</em>. The label <em>Workspace · latest scan per repo</em> means we dedupe — one scan per repo, not every historical run.</span></div></li>
+              <li data-step="charts"><span class="guide-step-num">3</span><div><strong>Use the charts</strong><span><em>Findings by severity</em> — bar chart of open issues. <em>Security score</em> — ring shows workspace average (higher is better). <em>Repository coverage</em> — which repos have the most open findings. <em>Remediation progress</em> — fixed vs still open.</span></div></li>
+              <li data-step="next"><span class="guide-step-num">4</span><div><strong>Take action</strong><span>Open <em>Findings</em> in the sidebar to filter and click A-Fix on any row. The sidebar badges on Findings and A-Fix queue update from the same data as Overview.</span></div></li>
+            </ol>
+            <div class="module-guide-section">
+              <h3>Two views on the same page</h3>
+              <div class="module-guide-grid">
+                <article class="module-guide-card"><h4>Before any scan</h4><p>You see the hero, workflow strip (Scan → Rank → A-Fix → Ship), capability list, and a getting-started checklist. Run the demo to unlock charts.</p></article>
+                <article class="module-guide-card"><h4>After scanning</h4><p>KPI strip + four chart panels appear above the hero (hero may scroll below). Numbers reflect all repos you have scanned in this workspace.</p></article>
+                <article class="module-guide-card"><h4>Sidebar stats</h4><p>Repos, Open, and Avg score at the top of the left panel mirror Overview — they update whenever scans complete.</p></article>
+              </div>
+            </div>
+            <div class="module-guide-section">
+              <h3>What the numbers mean</h3>
+              <ul class="module-guide-list">
+                <li><strong>Critical / High</strong> — open findings by severity from latest scans (secrets and SQLi are usually Critical).</li>
+                <li><strong>Fixed</strong> — findings you resolved with A-Fix or marked fixed in a scan.</li>
+                <li><strong>Security score</strong> — 0–100 per repo; workspace card shows the average. Drops when critical/high issues pile up.</li>
+                <li><strong>Repos scanned</strong> — count of repositories with at least one completed scan here.</li>
+                <li><strong>Findings badge</strong> — same open count as the severity chart total.</li>
+              </ul>
+            </div>
+            <div class="module-guide-section">
+              <h3>Where to go next</h3>
+              <ul class="module-guide-list">
+                <li><strong>Findings</strong> — full searchable table of every open issue across repos.</li>
+                <li><strong>A-Fix queue</strong> — findings that have a template or AI fix ready.</li>
+                <li><strong>Repositories</strong> — scan any GitHub repo you can access.</li>
+                <li><strong>Cloud / Attack / Protect</strong> — switch modules in the top pill bar for infra, live URLs, and WAF.</li>
+              </ul>
+            </div>
+            <details class="module-guide-faq">
+              <summary>Why is Critical 0 but the chart shows issues?</summary>
+              <p>Severity labels differ: KPI <em>High</em> maps to scanner “warning” severity (e.g. vulnerable dependencies). Check the chart legend for the critical / high / info split.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Why did my score disappear after idle time?</summary>
+              <p>Free workspaces sleep when unused. Scan history may reset — reconnect GitHub and rescan. Your Overview repopulates from new scans.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Is this mock data?</summary>
+              <p>No. Every number comes from real scans you ran (demo or your repos). The demo uses a sample app with intentional vulnerabilities.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Overview vs Findings — which should I use?</summary>
+              <p>Overview for trends and “are we getting better?” Findings when you need file paths, rule IDs, and A-Fix buttons for specific issues.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>How often should I scan?</summary>
+              <p>On every meaningful PR, weekly on main branches, and before releases. Re-scan after applying A-Fix to see Fixed and Remediation progress move.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Can I see one repo only?</summary>
+              <p>Overview is workspace-wide. Click a repo in Recent scans or open Findings and filter — or run a single-repo scan and check that scan’s KPI scope (“This scan”) in the strip.</p>
+            </details>
+            <a href="#" class="module-guide-doc-link" data-docs-section="overview">Open full Overview guide in Documentation →</a>
+          </section>
+        </div>
+
         <div class="stats-strip hidden" id="statsStrip">
+          <p class="stats-strip-scope" id="statsStripScope">Workspace · latest scan per repo</p>
           <div class="kpi-grid">
             <div class="kpi-card kpi-critical">
               <span class="kpi-label">Critical</span>
@@ -142,25 +297,216 @@
               <span class="kpi-value" id="statScore">—</span>
             </div>
             <div class="kpi-card kpi-repo">
-              <span class="kpi-label">Repository</span>
+              <span class="kpi-label" id="statRepoLabel">Repos scanned</span>
               <span class="kpi-value kpi-value-sm" id="repoChip">—</span>
             </div>
           </div>
           <button type="button" class="btn-sm-outline hidden" id="publishBtn">Post to pull request</button>
         </div>
 
-        <div id="emptyState" class="empty-feed">
-          <div class="empty-card">
-            <div class="empty-feed-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L4 6v6c0 5.5 3.5 9 8 10.5 4.5-1.5 8-5 8-10.5V6L12 2z"/><path d="M12 9v5M10 11.5h4"/></svg>
-            </div>
-            <h2>No findings yet</h2>
-            <p>Connect GitHub and scan your repositories to surface secrets, injection flaws, and vulnerable dependencies — ranked by severity with one-click A-Fix.</p>
-            <div class="empty-actions">
-              <button type="button" class="btn-primary" id="emptyScanBtn">+ New scan</button>
-              <button type="button" class="btn-outline" id="emptyConnectBtn">Connect GitHub</button>
-            </div>
+        <section class="overview-charts hidden" id="overviewCharts" aria-label="Security analytics">
+          <div class="overview-charts-grid">
+            <article class="chart-panel">
+              <div class="chart-panel-head">
+                <div>
+                  <h3>Findings by severity</h3>
+                  <p class="chart-panel-desc">Across your latest scan per repository</p>
+                </div>
+                <span class="chart-panel-stat" id="chartSeverityTotal">— open</span>
+              </div>
+              <div class="severity-bar-chart" id="severityBarChart"></div>
+              <div class="chart-legend" id="severityLegend"></div>
+            </article>
+
+            <article class="chart-panel chart-panel-score">
+              <div class="chart-panel-head">
+                <div>
+                  <h3>Security score</h3>
+                  <p class="chart-panel-desc">Workspace average</p>
+                </div>
+              </div>
+              <div class="score-ring-wrap">
+                <svg class="score-ring" viewBox="0 0 120 120" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#a78bfa"/>
+                      <stop offset="100%" stop-color="#7c3aed"/>
+                    </linearGradient>
+                  </defs>
+                  <circle class="score-ring-bg" cx="60" cy="60" r="48"/>
+                  <circle class="score-ring-fill" id="scoreRingFill" cx="60" cy="60" r="48"/>
+                </svg>
+                <div class="score-ring-label">
+                  <span class="score-ring-val" id="scoreRingVal">—</span>
+                  <span class="score-ring-sub">/ 100</span>
+                </div>
+              </div>
+              <p class="chart-footnote" id="scoreRingNote">Run a scan to calculate your score</p>
+            </article>
+
+            <article class="chart-panel chart-panel-wide">
+              <div class="chart-panel-head">
+                <div>
+                  <h3>Repository coverage</h3>
+                  <p class="chart-panel-desc">Open findings per scanned repo</p>
+                </div>
+                <span class="chart-panel-stat" id="chartRepoCount">— repos</span>
+              </div>
+              <div class="repo-bar-chart" id="repoBarChart"></div>
+            </article>
+
+            <article class="chart-panel">
+              <div class="chart-panel-head">
+                <div>
+                  <h3>Remediation progress</h3>
+                  <p class="chart-panel-desc">Fixed vs open findings</p>
+                </div>
+              </div>
+              <div class="stacked-bar-wrap">
+                <div class="stacked-bar" id="remediationBar">
+                  <span class="stack-seg stack-fixed" id="remediationFixed" style="width:0%"></span>
+                  <span class="stack-seg stack-open" id="remediationOpen" style="width:0%"></span>
+                </div>
+                <div class="stacked-bar-labels">
+                  <span><i class="dot dot-fixed"></i> Fixed <strong id="remediationFixedVal">0</strong></span>
+                  <span><i class="dot dot-open"></i> Open <strong id="remediationOpenVal">0</strong></span>
+                </div>
+              </div>
+            </article>
           </div>
+        </section>
+
+        <div id="homeView" class="home-view">
+          <section class="home-hero">
+            <div class="home-hero-copy">
+              <p class="home-eyebrow">Aegis Loop / code</p>
+              <h2>Find vulnerabilities in PRs.<br>Fix them before merge.</h2>
+              <p class="home-lead">Not another security dashboard — findings land in pull requests, commit checks, and one-click autofix. Scan secrets, injection flaws, and vulnerable dependencies across every repo you ship.</p>
+              <div class="home-actions">
+                <button type="button" class="btn-primary btn-lg" id="homeDemoBtn">Run demo scan</button>
+                <button type="button" class="btn-outline btn-lg" id="homeScanBtn">+ New scan</button>
+                <button type="button" class="btn-ghost btn-lg" id="homeConnectBtn">Connect GitHub</button>
+              </div>
+              <p class="home-note">Demo runs instantly — no GitHub required. Sample app includes real finding types with template autofix.</p>
+            </div>
+            <div class="home-hero-stats" id="homeStats">
+              <div class="home-stat">
+                <span class="home-stat-val">3</span>
+                <span class="home-stat-label">Scanner engines</span>
+              </div>
+              <div class="home-stat">
+                <span class="home-stat-val">&lt;2m</span>
+                <span class="home-stat-label">To first finding</span>
+              </div>
+              <div class="home-stat">
+                <span class="home-stat-val">1-click</span>
+                <span class="home-stat-label">A-Fix on PRs</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="home-workflow" aria-label="How it works">
+            <div class="home-workflow-step">
+              <span class="home-step-num">1</span>
+              <strong>Scan</strong>
+              <span>Repo, PR, or all repos</span>
+            </div>
+            <div class="home-workflow-arrow" aria-hidden="true">→</div>
+            <div class="home-workflow-step">
+              <span class="home-step-num">2</span>
+              <strong>Rank</strong>
+              <span>Critical → high → info</span>
+            </div>
+            <div class="home-workflow-arrow" aria-hidden="true">→</div>
+            <div class="home-workflow-step">
+              <span class="home-step-num">3</span>
+              <strong>A-Fix</strong>
+              <span>Template or AI patch</span>
+            </div>
+            <div class="home-workflow-arrow" aria-hidden="true">→</div>
+            <div class="home-workflow-step">
+              <span class="home-step-num">4</span>
+              <strong>Ship</strong>
+              <span>PR comment + check</span>
+            </div>
+          </section>
+
+          <div class="home-grid">
+            <section class="home-panel">
+              <h3>What we catch</h3>
+              <p class="home-panel-desc">Live rules running on every scan — same engines for demo and production repos.</p>
+              <ul class="home-cap-list">
+                <li>
+                  <span class="cap-icon cap-crit">!</span>
+                  <div>
+                    <strong>Exposed secrets</strong>
+                    <span>AWS keys, API tokens, hardcoded passwords → env var autofix</span>
+                  </div>
+                </li>
+                <li>
+                  <span class="cap-icon cap-crit">!</span>
+                  <div>
+                    <strong>SQL injection</strong>
+                    <span>String interpolation in queries → parameterized query patch</span>
+                  </div>
+                </li>
+                <li>
+                  <span class="cap-icon cap-warn">⚡</span>
+                  <div>
+                    <strong>Unsafe execution</strong>
+                    <span>Dynamic eval patterns → AI-assisted remediation</span>
+                  </div>
+                </li>
+                <li>
+                  <span class="cap-icon cap-info">◇</span>
+                  <div>
+                    <strong>Vulnerable dependencies</strong>
+                    <span>Live OSV lookup on npm packages → version bump autofix</span>
+                  </div>
+                </li>
+              </ul>
+            </section>
+
+            <section class="home-panel">
+              <h3>Why teams use it</h3>
+              <p class="home-panel-desc">Built for developers who ship — not for security teams babysitting another tool.</p>
+              <ul class="home-value-list">
+                <li><strong>PR-native</strong> — comments and <code>aegis-loop/code</code> checks on every pull request</li>
+                <li><strong>Fix, don’t file</strong> — template autofix and optional LLM patches, not ticket spam</li>
+                <li><strong>Bulk coverage</strong> — scan every GitHub repo you can access in one run</li>
+                <li><strong>Webhook-ready</strong> — auto-scan on every push to a PR branch</li>
+              </ul>
+            </section>
+
+            <section class="home-panel home-panel-wide">
+              <h3>Get started</h3>
+              <ol class="home-checklist" id="homeChecklist">
+                <li data-step="demo"><span class="check-icon">○</span><div><strong>Run the demo scan</strong><span>See ranked findings and A-Fix in 30 seconds</span></div></li>
+                <li data-step="github"><span class="check-icon">○</span><div><strong>Connect GitHub</strong><span>Scan private repos and post to pull requests</span></div></li>
+                <li data-step="repo"><span class="check-icon">○</span><div><strong>Scan your code</strong><span>Single repo, all repos, or a PR URL</span></div></li>
+                <li data-step="fix"><span class="check-icon">○</span><div><strong>Apply an A-Fix</strong><span>Commit the patch or open an autofix PR</span></div></li>
+              </ol>
+            </section>
+          </div>
+
+          <section class="home-preview">
+            <div class="home-preview-head">
+              <h3>Example findings</h3>
+              <span class="home-preview-tag">Scanner output</span>
+            </div>
+            <p class="home-panel-desc" style="margin-bottom:14px">Run the demo to see live results — ranked like this in your security feed.</p>
+            <div class="home-preview-table">
+              <div class="home-preview-row head">
+                <span>Finding</span><span>Severity</span><span>Autofix</span>
+              </div>
+              <div class="home-preview-row">
+                <span>Vulnerable lodash@4.17.15 (OSV)</span><span class="sev-badge sev-info">Info</span><span class="home-preview-fix">Bump version</span>
+              </div>
+              <div class="home-preview-row">
+                <span>Vulnerable express@4.18.2 (OSV)</span><span class="sev-badge sev-info">Info</span><span class="home-preview-fix">Bump version</span>
+              </div>
+            </div>
+          </section>
         </div>
 
         <div id="dashboard" class="content-panel hidden">
@@ -283,6 +629,406 @@
           </div>
           <div class="docs-body" id="docsBody"></div>
         </div>
+
+        <div id="prView" class="content-panel pr-view hidden">
+          <div class="panel-toolbar">
+            <div>
+              <h2>Pull requests</h2>
+              <span class="panel-meta">PR-native security — comments, checks, and autofix on every merge</span>
+            </div>
+            <button type="button" class="btn-primary btn-sm" id="prScanBtnHeader">Scan pull request</button>
+          </div>
+          <div class="feature-cards" id="prFeatureCards">
+            <article class="feature-card">
+              <h3>PR comments</h3>
+              <p>Markdown summaries posted on every scanned pull request — updates in place.</p>
+            </article>
+            <article class="feature-card">
+              <h3>Commit checks</h3>
+              <p><code>aegis-loop/code</code> status on the PR head commit — block merge on critical findings.</p>
+            </article>
+            <article class="feature-card">
+              <h3>Autofix on branch</h3>
+              <p>Apply A-Fix directly to the PR branch or open a remediation PR.</p>
+            </article>
+          </div>
+          <div class="table-scroll">
+            <table class="feed-table">
+              <thead>
+                <tr>
+                  <th>Pull request</th>
+                  <th>Repository</th>
+                  <th class="col-sev">Findings</th>
+                  <th class="col-status">GitHub</th>
+                  <th class="col-action"></th>
+                </tr>
+              </thead>
+              <tbody id="prScanList">
+                <tr><td colspan="5" class="repos-loading">Loading PR scan history…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="autofixQueueView" class="content-panel autofix-queue-view hidden">
+          <div class="panel-toolbar">
+            <div>
+              <h2>A-Fix queue</h2>
+              <span class="panel-meta">Open findings with template or AI remediation — fix, don't file tickets</span>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="feed-table">
+              <thead>
+                <tr>
+                  <th class="col-name">Finding</th>
+                  <th>Repository</th>
+                  <th class="col-sev">Severity</th>
+                  <th class="col-fix">Fix type</th>
+                  <th class="col-status">Action</th>
+                </tr>
+              </thead>
+              <tbody id="autofixQueueList">
+                <tr><td colspan="5" class="repos-loading">Run a scan to populate the queue</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="scannersView" class="content-panel scanners-view hidden">
+          <div class="panel-toolbar">
+            <div>
+              <h2>Scanners</h2>
+              <span class="panel-meta">Engines running on every scan — secrets, injection, dependencies, and AI remediation</span>
+            </div>
+          </div>
+          <div class="scanner-grid" id="scannerGrid"></div>
+        </div>
+
+        <div id="integrationsView" class="content-panel integrations-view hidden">
+          <div class="panel-toolbar">
+            <div>
+              <h2>Integrations</h2>
+              <span class="panel-meta">Connect GitHub, enable webhooks, and wire AI autofix into your workflow</span>
+            </div>
+          </div>
+          <div class="integration-grid" id="integrationGrid"></div>
+        </div>
+
+        <div id="cloudView" class="module-view hidden">
+          <section class="module-guide" id="cloudGuide">
+            <div class="module-guide-head">
+              <div>
+                <span class="module-guide-eyebrow">How to use Cloud</span>
+                <h2>Catch cloud misconfigs before they go live</h2>
+                <p class="module-guide-lead"><strong>What is this?</strong> Cloud scans the infrastructure files in your repo — Terraform, Kubernetes YAML, Docker Compose — for settings that accidentally expose data to the internet (public storage buckets, firewalls open to everyone, etc.). You do <em>not</em> need AWS or GCP credentials; we read the files, not your live cloud account.</p>
+                <p class="module-guide-lead"><strong>Why it matters:</strong> A single misconfigured S3 bucket or security group can leak customer data even when your application code is perfect. This module finds those mistakes in the same place you already edit code.</p>
+                <p class="module-guide-lead"><strong>When to use it:</strong> Before merging infra changes, after onboarding a new repo with Terraform/K8s, or when auditing “why is this port public?” Run Cloud alongside Code scans — app bugs and infra gaps are different problems.</p>
+              </div>
+              <button type="button" class="btn-ghost btn-sm module-guide-dismiss" data-guide="cloud">Hide guide</button>
+            </div>
+            <div class="module-guide-flow">
+              <span>Code</span> finds app bugs → <span>Cloud</span> finds infra exposure → <span>Protect</span> blocks live attacks
+            </div>
+            <ol class="module-guide-steps" id="cloudGuideSteps">
+              <li data-step="demo"><span class="guide-step-num">1</span><div><strong>Try the demo scan</strong><span>Click <em>Run demo scan</em> below. You will see sample findings from a bundled Terraform + Kubernetes + Docker repo — no GitHub connection required. Use this to learn what a “Critical” cloud finding looks like before scanning your own stuff.</span></div></li>
+              <li data-step="repo"><span class="guide-step-num">2</span><div><strong>Scan your own repo</strong><span>Click <em>Scan repository IaC</em> and enter <code>owner/repo</code> (e.g. <code>acme-corp/platform</code>) plus branch <code>main</code>. We clone the repo and scan every <code>.tf</code>, <code>.yaml</code>, and Docker file we find — same GitHub access as the Code module.</span></div></li>
+              <li data-step="fix"><span class="guide-step-num">3</span><div><strong>Fix in your IaC</strong><span>Each row shows file, line, and rule ID. Open that file in your editor: replace <code>0.0.0.0/0</code> with your office/VPN CIDR, set S3 <code>block_public_acls = true</code>, narrow IAM <code>Action</code> lists, or add a NetworkPolicy in front of a public LoadBalancer.</span></div></li>
+              <li data-step="protect"><span class="guide-step-num">4</span><div><strong>Feed Protect</strong><span>Switch to the <em>Protect</em> tab → <em>Sync rules from findings</em>. Cloud findings like open security groups can add SSRF-blocking rules so metadata IP probes are stopped at the edge.</span></div></li>
+            </ol>
+            <div class="module-guide-section">
+              <h3>What we check (by provider)</h3>
+              <div class="module-guide-grid">
+                <article class="module-guide-card"><h4>AWS</h4><p>Public S3 ACLs, security groups open to <code>0.0.0.0/0</code>, wildcard IAM <code>Action: "*"</code>.</p></article>
+                <article class="module-guide-card"><h4>Kubernetes</h4><p>Services with <code>type: LoadBalancer</code> that expose cluster workloads publicly.</p></article>
+                <article class="module-guide-card"><h4>Docker / GCP / Azure</h4><p>Ports on <code>0.0.0.0</code>, GCS <code>allUsers</code> ACLs, Azure NSGs with <code>source_address_prefix = "*"</code>.</p></article>
+              </div>
+            </div>
+            <div class="module-guide-section">
+              <h3>Reading your results</h3>
+              <ul class="module-guide-list">
+                <li><strong>Critical</strong> — likely internet-wide exposure (public bucket, world-open firewall). Fix before deploy.</li>
+                <li><strong>High</strong> — risky defaults (wildcard IAM, public LoadBalancer). Confirm intent or restrict.</li>
+                <li><strong>Posture score</strong> — higher is better; drops as critical/high findings accumulate.</li>
+                <li><strong>Rule column</strong> — stable ID like <code>cloud/sg-open-world</code> for tickets and Protect sync.</li>
+              </ul>
+            </div>
+            <div class="module-guide-section">
+              <h3>Example workflow</h3>
+              <ul class="module-guide-list">
+                <li>Developer opens PR changing <code>infra/main.tf</code> → run Cloud scan on that repo.</li>
+                <li>Finding: <em>Security group open to the world</em> on line 42 → change CIDR to <code>10.0.0.0/8</code>.</li>
+                <li>Re-scan until Critical = 0 → merge PR → sync Protect for runtime SSRF rules.</li>
+              </ul>
+            </div>
+            <details class="module-guide-faq">
+              <summary>What files does Cloud scan?</summary>
+              <p>Files ending in <code>.tf</code>, <code>.yaml</code>, <code>.yml</code>, <code>.json</code>, <code>.hcl</code>, plus paths named <code>docker-compose</code>, <code>cloudformation</code>, <code>Dockerfile</code>, or <code>serverless</code>. We pattern-match dangerous strings — we do not execute Terraform or connect to your cloud API.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Do I need to connect AWS, GCP, or Azure?</summary>
+              <p>No. Cloud analyzes what is <em>declared</em> in git. That catches the misconfig <em>before</em> it is applied. Live cloud inventory scans (comparing running resources vs. code) are on the roadmap.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Why did my scan find nothing?</summary>
+              <p>Common reasons: the repo has no IaC files, infra lives in a different repo you did not scan, or your templates already follow least-privilege. Try the demo scan first to confirm the module is working.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Is a LoadBalancer finding always wrong?</summary>
+              <p>Not always — public LBs are intentional for many APIs. Treat High findings as “confirm this is meant to be public, then add network policies or WAF rules.”</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>How is this different from Code scanning?</summary>
+              <p>Code finds vulnerabilities in application source (SQLi, secrets in JS). Cloud finds exposure in <em>infrastructure definitions</em> — the layer that decides who on the internet can reach your storage and ports.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Can I scan the same repo on every PR?</summary>
+              <p>Yes. Re-run <em>Scan repository IaC</em> whenever infra files change. Pair with Code PR scans so both app and infra are checked before merge.</p>
+            </details>
+            <a href="#" class="module-guide-doc-link" data-docs-section="cloud">Open full Cloud guide in Documentation →</a>
+          </section>
+          <div class="module-kpi-grid">
+            <div class="kpi-card kpi-critical"><span class="kpi-label">Critical</span><span class="kpi-value" id="cloudStatCrit">0</span></div>
+            <div class="kpi-card kpi-high"><span class="kpi-label">High</span><span class="kpi-value" id="cloudStatWarn">0</span></div>
+            <div class="kpi-card"><span class="kpi-label">Info</span><span class="kpi-value" id="cloudStatInfo">0</span></div>
+            <div class="kpi-card kpi-score"><span class="kpi-label">Posture score</span><span class="kpi-value" id="cloudStatScore">—</span></div>
+          </div>
+          <div class="module-actions">
+            <button type="button" class="btn-primary btn-sm" id="cloudDemoBtn">Run demo scan</button>
+            <button type="button" class="btn-outline btn-sm" id="cloudScanOpenBtn">Scan repository IaC</button>
+          </div>
+          <div class="feature-cards">
+            <article class="feature-card"><h3>AWS</h3><p>S3 public ACLs, open security groups, wildcard IAM policies.</p></article>
+            <article class="feature-card"><h3>Kubernetes</h3><p>Public LoadBalancers and exposed cluster services.</p></article>
+            <article class="feature-card"><h3>Docker</h3><p>Ports bound to 0.0.0.0 and compose misconfigs.</p></article>
+          </div>
+          <div class="content-panel module-scan-history-panel">
+            <div class="panel-toolbar">
+              <div><h2>Recent cloud scans</h2><span class="panel-meta">Click a scan to reload its findings</span></div>
+            </div>
+            <ul id="cloudScanHistory" class="scan-history module-scan-history-list"></ul>
+          </div>
+          <div class="content-panel">
+            <div class="panel-toolbar"><div><h2>Cloud findings</h2><span class="panel-meta">Terraform, CloudFormation, K8s, and Docker</span></div></div>
+            <div class="table-scroll">
+              <table class="feed-table">
+                <thead><tr><th>Finding</th><th>Location</th><th>Severity</th><th>Rule</th><th></th></tr></thead>
+                <tbody id="cloudFindingsList"><tr><td colspan="5" class="repos-loading">Run a cloud scan to get started</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="attackView" class="module-view hidden">
+          <section class="module-guide" id="attackGuide">
+            <div class="module-guide-head">
+              <div>
+                <span class="module-guide-eyebrow">How to use Attack</span>
+                <h2>Test what attackers see on your live site</h2>
+                <p class="module-guide-lead"><strong>What is this?</strong> Attack sends a safe, read-only request to a URL you choose (your staging site, production app, landing page) and checks basic security hygiene: is HTTPS enforced? Are protective headers present? Does the server leak too much info?</p>
+                <p class="module-guide-lead"><strong>Why it matters:</strong> Code scans catch bugs in source. Attack checks what is actually exposed on the web <em>right now</em> — the same surface real attackers probe. A perfect codebase behind a misconfigured CDN can still be vulnerable.</p>
+                <p class="module-guide-lead"><strong>When to use it:</strong> After deploying to staging or production, when onboarding a new domain, or before a launch checklist. Probe staging first, then production once you are confident.</p>
+              </div>
+              <button type="button" class="btn-ghost btn-sm module-guide-dismiss" data-guide="attack">Hide guide</button>
+            </div>
+            <div class="module-guide-flow">
+              Deploy site → <span>Attack</span> probes headers &amp; HTTPS → fix CDN/server config → <span>Protect</span> blocks payloads
+            </div>
+            <ol class="module-guide-steps" id="attackGuideSteps">
+              <li data-step="url"><span class="guide-step-num">1</span><div><strong>Pick a URL you control</strong><span>Use a full URL like <code>https://staging.yourapp.com</code> or just <code>yourapp.com</code> (we add <code>https://</code> automatically). Only probe sites you own or have written permission to test — never third-party sites.</span></div></li>
+              <li data-step="probe"><span class="guide-step-num">2</span><div><strong>Run a probe</strong><span>Click <em>Probe URL</em>, paste the address, submit. We send a single GET request with redirects followed — no POST fuzzing, no login attempts, no exploit payloads.</span></div></li>
+              <li data-step="fix"><span class="guide-step-num">3</span><div><strong>Fix what we find</strong><span>Missing HSTS? Add <code>Strict-Transport-Security</code> at your CDN or nginx. Missing CSP? Start with a report-only policy. Plain HTTP? Force redirect to HTTPS. Server header too verbose? Strip or genericize it.</span></div></li>
+              <li data-step="protect"><span class="guide-step-num">4</span><div><strong>Sync to Protect</strong><span>On the Protect tab, sync rules from findings. For example, sites still on HTTP can add rules that block cleartext URL patterns in incoming requests.</span></div></li>
+            </ol>
+            <div class="module-guide-section">
+              <h3>What each check means</h3>
+              <div class="module-guide-grid">
+                <article class="module-guide-card"><h4>HTTPS / HSTS</h4><p>Critical if the site answers on plain HTTP. HSTS tells browsers to always use TLS — prevents sslstrip-style downgrade attacks.</p></article>
+                <article class="module-guide-card"><h4>CSP &amp; X-Frame-Options</h4><p>Content-Security-Policy limits where scripts can load. X-Frame-Options reduces clickjacking (your page embedded in a malicious iframe).</p></article>
+                <article class="module-guide-card"><h4>Server disclosure</h4><p>Info-level finding when the <code>Server</code> header reveals nginx/Apache/IIS versions — helps attackers pick exploits.</p></article>
+              </div>
+            </div>
+            <div class="module-guide-section">
+              <h3>Reading your results</h3>
+              <ul class="module-guide-list">
+                <li><strong>Critical</strong> — site served over unencrypted HTTP (<code>attack/plain-http</code>).</li>
+                <li><strong>High</strong> — missing HSTS or CSP (<code>attack/missing-hsts</code>, <code>attack/missing-csp</code>).</li>
+                <li><strong>Info</strong> — missing X-Frame-Options, nosniff, or verbose Server header.</li>
+                <li><strong>Surface score</strong> — summary metric; fewer header/HTTPS gaps = higher score.</li>
+                <li><strong>Probe failed?</strong> — timeout, DNS error, or blocked bot traffic. Check the URL is reachable from the public internet.</li>
+              </ul>
+            </div>
+            <div class="module-guide-section">
+              <h3>Example fixes (nginx)</h3>
+              <ul class="module-guide-list">
+                <li><code>add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;</code></li>
+                <li><code>add_header Content-Security-Policy "default-src 'self';" always;</code></li>
+                <li><code>add_header X-Frame-Options "SAMEORIGIN" always;</code></li>
+                <li>Redirect HTTP → HTTPS with <code>return 301 https://$host$request_uri;</code></li>
+              </ul>
+              <p class="module-guide-note" style="margin-top:10px;margin-bottom:0">Cloudflare, Vercel, and AWS CloudFront have equivalent settings in their dashboards — you do not need nginx specifically.</p>
+            </div>
+            <details class="module-guide-faq">
+              <summary>Is this a full penetration test?</summary>
+              <p>No. Attack runs passive surface checks: one GET, response headers, status code. It does not brute-force passwords, scan for SQLi, or attempt to exploit CVEs. Hire a professional pentest for that scope.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>What URLs can I probe?</summary>
+              <p>Any URL you are authorized to test — your apps, staging environments, marketing sites, and customer deployments you manage. Avoid third-party sites, competitor domains, and government systems without explicit approval.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Will probing affect my production traffic?</summary>
+              <p>Each probe is a single GET request — negligible load. Still, start with staging. Some WAFs may rate-limit our scanner user-agent (<code>AegisLoop-Attack/1.0</code>); whitelist if needed.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Why does a “secure” site still show findings?</summary>
+              <p>Headers are often set at the CDN edge but missing on origin, or vice versa. We report what the URL returns after redirects — fix at whichever layer serves the final response.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Attack vs. Code — which first?</summary>
+              <p>Code first (find bugs in source), then Attack on deployed URLs (verify headers/HTTPS in production), then Protect (block automated probes). They complement each other; neither replaces the other.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Can I probe localhost?</summary>
+              <p>Our server runs in the cloud and cannot reach <code>localhost</code> on your laptop. Use a public staging URL or a tunnel (ngrok, Cloudflare Tunnel) for local testing.</p>
+            </details>
+            <a href="#" class="module-guide-doc-link" data-docs-section="attack">Open full Attack guide in Documentation →</a>
+          </section>
+          <div class="module-kpi-grid">
+            <div class="kpi-card kpi-critical"><span class="kpi-label">Critical</span><span class="kpi-value" id="attackStatCrit">0</span></div>
+            <div class="kpi-card kpi-high"><span class="kpi-label">High</span><span class="kpi-value" id="attackStatWarn">0</span></div>
+            <div class="kpi-card"><span class="kpi-label">Info</span><span class="kpi-value" id="attackStatInfo">0</span></div>
+            <div class="kpi-card kpi-score"><span class="kpi-label">Surface score</span><span class="kpi-value" id="attackStatScore">—</span></div>
+          </div>
+          <div class="module-actions">
+            <button type="button" class="btn-primary btn-sm" id="attackProbeOpenBtn">Probe URL</button>
+          </div>
+          <div class="feature-cards">
+            <article class="feature-card"><h3>HTTPS &amp; headers</h3><p>HSTS, CSP, X-Frame-Options, and nosniff checks.</p></article>
+            <article class="feature-card"><h3>Safe probes</h3><p>GET-only requests — no destructive exploitation.</p></article>
+            <article class="feature-card"><h3>Correlated</h3><p>Findings feed Protect WAF rule generation.</p></article>
+          </div>
+          <div class="content-panel module-scan-history-panel">
+            <div class="panel-toolbar">
+              <div><h2>Recent probes</h2><span class="panel-meta">Click a probe to reload its findings</span></div>
+            </div>
+            <ul id="attackScanHistory" class="scan-history module-scan-history-list"></ul>
+          </div>
+          <div class="content-panel">
+            <div class="panel-toolbar"><div><h2>Surface findings</h2><span class="panel-meta">Live URL probes you authorize</span></div></div>
+            <div class="table-scroll">
+              <table class="feed-table">
+                <thead><tr><th>Finding</th><th>Target</th><th>Severity</th><th>Rule</th><th></th></tr></thead>
+                <tbody id="attackFindingsList"><tr><td colspan="5" class="repos-loading">Probe a URL to see results</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="protectView" class="module-view hidden">
+          <section class="module-guide" id="protectGuide">
+            <div class="module-guide-head">
+              <div>
+                <span class="module-guide-eyebrow">How to use Protect</span>
+                <h2>Block attacks at the edge — automatically</h2>
+                <p class="module-guide-lead"><strong>What is this?</strong> Protect is a web application firewall (WAF). It watches incoming HTTP requests and blocks obvious attack patterns — SQL injection strings, script tags in URLs, path traversal (<code>../</code>) — before they reach your application code.</p>
+                <p class="module-guide-lead"><strong>Why it matters:</strong> Even with clean code and solid cloud posture, automated bots constantly scan the internet for SQLi and XSS probes. Protect is the last line when something slips through review or a zero-day appears.</p>
+                <p class="module-guide-lead"><strong>When to use it:</strong> After your first Code/Cloud/Attack scans (so derived rules exist), before exposing an app publicly, and whenever you see suspicious traffic in logs. Think of it as a safety net, not a substitute for fixing root causes.</p>
+              </div>
+              <button type="button" class="btn-ghost btn-sm module-guide-dismiss" data-guide="protect">Hide guide</button>
+            </div>
+            <div class="module-guide-flow">
+              Scan (Code / Cloud / Attack) → <span>Sync rules</span> → toggle as needed → <span>Block log</span> confirms blocks
+            </div>
+            <ol class="module-guide-steps" id="protectGuideSteps">
+              <li data-step="scan"><span class="guide-step-num">1</span><div><strong>Run other modules first</strong><span>Scan repos in <em>Code</em> (secrets, SQLi), IaC in <em>Cloud</em> (open SGs), URLs in <em>Attack</em> (HTTP downgrade). Protect maps specific finding types to extra WAF rules — more scans = smarter coverage.</span></div></li>
+              <li data-step="sync"><span class="guide-step-num">2</span><div><strong>Sync rules</strong><span>Click <em>Sync rules from findings</em>. You always get 3 built-in rules (SQLi, XSS, path traversal) plus optional derived rules from your findings. Re-sync after new scans to pick up fresh mappings.</span></div></li>
+              <li data-step="toggle"><span class="guide-step-num">3</span><div><strong>Enable or disable rules</strong><span>Each row has Enable/Disable. Turn off a rule if it blocks legitimate traffic (rare, but possible with aggressive patterns). The Blocks column shows how often each rule has fired.</span></div></li>
+              <li data-step="test"><span class="guide-step-num">4</span><div><strong>Test a block</strong><span>Click <em>Test block (SQLi)</em> — we send a harmless <code>' OR 1=1 --</code> payload to the API. If blocked, you will see a toast and a new row in the Block log below.</span></div></li>
+            </ol>
+            <p class="module-guide-note">On this dashboard, Protect is <strong>live</strong> — malicious query strings sent to <code>/app</code> or <code>/api</code> are blocked here so you can see it working. In production, deploy the same rule patterns in front of your app (Cloudflare WAF, AWS WAF, nginx, or middleware).</p>
+            <div class="module-guide-section">
+              <h3>Built-in rules (always present)</h3>
+              <div class="module-guide-grid">
+                <article class="module-guide-card"><h4>SQL injection</h4><p>Blocks patterns like <code>UNION SELECT</code> and <code>OR 1=1</code> in query strings and request bodies.</p></article>
+                <article class="module-guide-card"><h4>XSS</h4><p>Blocks <code>&lt;script</code> tags and <code>javascript:</code> URLs in incoming requests.</p></article>
+                <article class="module-guide-card"><h4>Path traversal</h4><p>Blocks <code>../</code> sequences that attackers use to read files outside the web root.</p></article>
+              </div>
+            </div>
+            <div class="module-guide-section">
+              <h3>Derived rules (from your scans)</h3>
+              <ul class="module-guide-list">
+                <li><strong>Code</strong> — AWS key patterns in requests, SQLi payloads from injection findings.</li>
+                <li><strong>Cloud</strong> — SSRF probes to cloud metadata IPs (<code>169.254.169.254</code>) when open SG findings exist.</li>
+                <li><strong>Attack</strong> — cleartext HTTP URL patterns when a site is still served over HTTP.</li>
+              </ul>
+            </div>
+            <div class="module-guide-section">
+              <h3>Reading the dashboard</h3>
+              <ul class="module-guide-list">
+                <li><strong>Rules</strong> — total rule count (built-in + derived).</li>
+                <li><strong>Active</strong> — rules currently enabled and enforcing.</li>
+                <li><strong>Blocked</strong> — cumulative blocks across all rules since last reset.</li>
+                <li><strong>Block log</strong> — last 20 blocked requests with method, path, matched rule, and timestamp.</li>
+              </ul>
+            </div>
+            <details class="module-guide-faq">
+              <summary>Where do rules come from?</summary>
+              <p>Three sources: (1) built-in patterns always loaded on sync, (2) rules mapped from Code/Cloud/Attack finding rule IDs, (3) your enable/disable choices per rule. Sync merges new findings without duplicating existing rule IDs.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Will this break my app?</summary>
+              <p>Rules only block requests matching attack patterns — normal page loads and API calls pass through. If something legitimate is blocked, disable that rule and check the Block log for the exact path and pattern. Adjust CDN/WAF rules in production the same way.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Do I still need to fix Code findings if Protect blocks them?</summary>
+              <p>Yes. WAF blocks are a bandage — fix the underlying bug in source, tighten IaC, and add headers. Protect catches automated spray-and-pray attacks; it does not patch your codebase.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>Why sync if built-in rules already exist?</summary>
+              <p>Built-ins cover generic attacks. Sync adds context-aware rules from <em>your</em> findings — e.g. if Cloud flagged open security groups, we also block metadata SSRF probes relevant to that posture.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>How do I deploy Protect in production?</summary>
+              <p>Export the pattern column from the rules table and implement equivalent rules in Cloudflare WAF, AWS WAF, ModSecurity, or your framework middleware. This dashboard proves the patterns work before you roll them out.</p>
+            </details>
+            <details class="module-guide-faq">
+              <summary>What happens when a request is blocked?</summary>
+              <p>The client receives HTTP 403 with a short message. The event is logged in Block log with the rule ID — use it to tune false positives or prove the WAF is working in audits.</p>
+            </details>
+            <a href="#" class="module-guide-doc-link" data-docs-section="protect">Open full Protect guide in Documentation →</a>
+          </section>
+          <div class="module-kpi-grid">
+            <div class="kpi-card"><span class="kpi-label">Rules</span><span class="kpi-value" id="protectStatRules">0</span></div>
+            <div class="kpi-card kpi-score"><span class="kpi-label">Active</span><span class="kpi-value" id="protectStatEnabled">0</span></div>
+            <div class="kpi-card kpi-critical"><span class="kpi-label">Blocked</span><span class="kpi-value" id="protectStatBlocked">0</span></div>
+          </div>
+          <div class="module-actions">
+            <button type="button" class="btn-primary btn-sm" id="protectSyncBtn">Sync rules from findings</button>
+            <button type="button" class="btn-outline btn-sm" id="protectExportBtn">Export rules (JSON)</button>
+            <button type="button" class="btn-outline btn-sm" id="protectDemoBtn">Test block (SQLi)</button>
+          </div>
+          <p class="module-note hidden" id="protectInlineNote">Protect runs inline on this dashboard — see the guide above for how it works.</p>
+          <div class="content-panel">
+            <div class="panel-toolbar"><div><h2>WAF rules</h2><span class="panel-meta">Built-in + derived from Code, Cloud, and Attack</span></div></div>
+            <div class="table-scroll">
+              <table class="feed-table">
+                <thead><tr><th>Rule</th><th>Source</th><th>Pattern</th><th>Blocks</th><th></th></tr></thead>
+                <tbody id="protectRulesList"><tr><td colspan="5" class="repos-loading">Loading rules…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="content-panel" style="margin-top:14px">
+            <div class="panel-toolbar"><div><h2>Block log</h2><span class="panel-meta">Recent blocked requests</span></div></div>
+            <div class="table-scroll">
+              <table class="feed-table">
+                <thead><tr><th>Request</th><th>Detail</th><th>Rule</th><th>Time</th></tr></thead>
+                <tbody id="protectEventsList"><tr><td colspan="4" class="repos-loading">No blocks yet</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
       </main>
     </div>
   </div>
@@ -408,7 +1154,43 @@
     </aside>
   </div>
 
+  <!-- Cloud scan modal -->
+  <div id="cloudScanModal" class="modal hidden">
+    <div class="modal-backdrop" data-close-cloud-scan></div>
+    <div class="modal-panel modal-sm">
+      <div class="modal-header">
+        <div><h3>Scan cloud IaC</h3><p class="modal-subtitle">Terraform, K8s, Docker Compose in a GitHub repo</p></div>
+        <button type="button" class="modal-close" data-close-cloud-scan>×</button>
+      </div>
+      <div class="modal-body">
+        <label for="cloudRepoInput">Repository</label>
+        <input id="cloudRepoInput" type="text" placeholder="owner/repo">
+        <label for="cloudBranchInput">Branch</label>
+        <input id="cloudBranchInput" type="text" value="main">
+        <button type="button" class="btn-primary btn-block" id="cloudScanBtn" style="margin-top:12px">Start cloud scan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attack probe modal -->
+  <div id="attackProbeModal" class="modal hidden">
+    <div class="modal-backdrop" data-close-attack-probe></div>
+    <div class="modal-panel modal-sm">
+      <div class="modal-header">
+        <div><h3>Probe URL</h3><p class="modal-subtitle">Safe GET probes — one URL per line for batch checks</p></div>
+        <button type="button" class="modal-close" data-close-attack-probe>×</button>
+      </div>
+      <div class="modal-body">
+        <label for="attackTargetInput">Target URL(s)</label>
+        <textarea id="attackTargetInput" class="scan-textarea" rows="4" placeholder="https://staging.yourapp.com&#10;https://yourapp.com"></textarea>
+        <p class="modal-hint">Enter one URL per line (max 20). Comma-separated also works.</p>
+        <button type="button" class="btn-primary btn-block" id="attackProbeBtn" style="margin-top:12px">Run probe(s)</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast hidden"></div>
+  <script src="/app/modules.js"></script>
   <script src="/app/app.js" type="module"></script>
 </body>
 </html>

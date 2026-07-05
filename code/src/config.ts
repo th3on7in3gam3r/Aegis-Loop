@@ -7,6 +7,8 @@ export const config = {
   port: Number(process.env.PORT) || 3847,
   appUrl: process.env.APP_URL || 'http://localhost:3847',
   demoRepo: join(__dirname, '../fixtures/sample-repo'),
+  cloudDemoRepo: join(__dirname, '../fixtures/cloud-demo'),
+  dataDir: process.env.AEGIS_DATA_DIR || join(__dirname, '../data'),
   sessionSecret: process.env.SESSION_SECRET || 'aegis-loop-dev-secret-change-in-prod',
   github: {
     clientId: process.env.GITHUB_CLIENT_ID || '',

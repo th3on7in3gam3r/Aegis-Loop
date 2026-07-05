@@ -1,5 +1,5 @@
 import { config } from './config.js';
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { GitHubSession } from './types.js';
 
 const COOKIE = 'aegis_github';
@@ -39,6 +39,18 @@ export function getSession(req: FastifyRequest): GitHubSession | null {
   } catch {
     return null;
   }
+}
+
+export function requireSession(
+  req: FastifyRequest,
+  reply: FastifyReply
+): GitHubSession | null {
+  const session = getSession(req);
+  if (!session) {
+    reply.status(401).send({ error: 'Sign in required' });
+    return null;
+  }
+  return session;
 }
 
 export function resolveToken(

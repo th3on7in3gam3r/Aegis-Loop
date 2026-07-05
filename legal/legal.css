@@ -1,0 +1,92 @@
+:root {
+  --bg: #eef1f8;
+  --surface: #fff;
+  --border: rgba(15,20,40,0.08);
+  --text: #12182b;
+  --text-2: #4a5270;
+  --text-3: #7a8299;
+  --violet: #7c3aed;
+  --font: 'Instrument Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--violet); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.legal-header {
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: blur(12px);
+  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.legal-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+  text-decoration: none;
+}
+.legal-logo:hover { text-decoration: none; }
+.legal-nav { display: flex; gap: 20px; flex-wrap: wrap; }
+.legal-nav a { font-size: 14px; color: var(--text-2); }
+.legal-nav a:hover { color: var(--text); }
+
+.legal-main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 28px 80px;
+}
+.legal-main h1 {
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+}
+.legal-updated {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-3);
+  margin-bottom: 36px;
+}
+.legal-main h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 32px 0 12px;
+  letter-spacing: -0.01em;
+}
+.legal-main p, .legal-main li {
+  font-size: 15px;
+  color: var(--text-2);
+  margin-bottom: 14px;
+}
+.legal-main ul { padding-left: 1.25rem; margin-bottom: 16px; }
+.legal-main li { margin-bottom: 8px; }
+
+.legal-footer {
+  border-top: 1px solid var(--border);
+  padding: 28px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.legal-footer-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 12px;
+}
+.legal-footer-links a { color: var(--text-2); font-size: 13px; }

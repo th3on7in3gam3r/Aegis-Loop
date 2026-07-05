@@ -1,10 +1,17 @@
 export type Severity = 'critical' | 'warning' | 'info';
 
+export type AegisModule = 'code' | 'cloud' | 'attack' | 'protect';
+
 export interface Autofix {
   description: string;
   originalLine: string;
   fixedLine: string;
   patchedFile: string;
+}
+
+export interface FindingRemediation {
+  summary: string;
+  steps: string[];
 }
 
 export interface Finding {
@@ -18,6 +25,7 @@ export interface Finding {
   message: string;
   snippet: string;
   autofix?: Autofix;
+  remediation?: FindingRemediation;
   fixed: boolean;
   prUrl?: string;
 }
@@ -41,8 +49,10 @@ export interface PullRequestMeta {
 
 export interface ScanResult {
   id: string;
+  module?: AegisModule;
   repo: string;
   branch: string;
+  target?: string;
   status: 'running' | 'complete' | 'failed';
   error?: string;
   startedAt: string;
@@ -75,3 +85,23 @@ export interface RuleContext {
 }
 
 export type FindingDraft = Omit<Finding, 'id' | 'scanId' | 'fixed' | 'prUrl'>;
+
+export interface ProtectRule {
+  id: string;
+  source: AegisModule | 'builtin';
+  title: string;
+  pattern: string;
+  description: string;
+  enabled: boolean;
+  blocked: number;
+  findingRuleId?: string;
+}
+
+export interface ProtectEvent {
+  id: string;
+  ruleId: string;
+  path: string;
+  method: string;
+  blockedAt: string;
+  detail: string;
+}
