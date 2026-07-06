@@ -13,6 +13,7 @@ let issuesModalRepo = null;
 let bulkScanning = false;
 let panelAiGenerated = false;
 let healthInfo = null;
+let findingsSeverityFilter = null;
 
 const DEMO_REPO = 'aegis-loop/sample-app';
 const CLOUD_DEMO_REPO = 'aegis-loop/cloud-demo';
@@ -900,8 +901,7 @@ async function showFindingsView() {
     );
 
     const q = $('#findingsSearchInput').value.trim();
-    if (q) filterFindings(q);
-    else renderFindingsTable(rows);
+    filterFindings();
 
     history.replaceState(null, '', '/app/?view=findings');
   } catch (e) {
@@ -1394,8 +1394,10 @@ function renderFindingsTable(findings, opts = {}) {
       msg = codeScanEmptyMsg();
     } else if (opts.empty === 'error') {
       msg = 'Could not load findings. Try refreshing the page.';
-    } else if (!$('#findingsSearchInput')?.value.trim()) {
+    } else if (!$('#findingsSearchInput')?.value.trim() && !findingsSeverityFilter) {
       msg = 'No open findings — your workspace looks clean.';
+    } else if (findingsSeverityFilter) {
+      msg = `No ${sevLabel(findingsSeverityFilter).toLowerCase()} findings match your filters.`;
     }
     tbody.innerHTML = `<tr><td colspan="7" class="repos-loading">${msg}</td></tr>`;
     return;
@@ -1434,7 +1436,7 @@ function renderFindingsTable(findings, opts = {}) {
         <div class="finding-desc">${escapeHtml(f.message)}</div>
       </td>
       <td><span class="finding-repo branch-tag" title="${escapeHtml(repo)}">${escapeHtml(repoLabel)}</span></td>
-      <td><span class="sev-badge ${sevClass(f.severity)}">${sevLabel(f.severity)}</span></td>
+      <td><button type="button" class="sev-badge sev-filter-btn ${sevClass(f.severity)}${findingsSeverityFilter === f.severity ? ' active' : ''}" data-sev="${f.severity}" title="Filter by ${sevLabel(f.severity)}">${sevLabel(f.severity)}</button></td>
       <td><span class="loc-file">${locLine}</span></td>
       <td><span class="fix-time">${fixTime(f.severity)}</span></td>
       <td>${statusCell}</td>`;
@@ -1457,6 +1459,28 @@ function renderFindingsTable(findings, opts = {}) {
       openFixGuidePanel(btn.dataset.id, btn.dataset.scan, btn.dataset.module);
     });
   });
+
+  tbody.querySelectorAll('.sev-filter-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setFindingsSeverityFilter(btn.dataset.sev);
+    });
+  });
+
+  updateFindingsSevFilterUi();
+}
+
+function setFindingsSeverityFilter(severity) {
+  findingsSeverityFilter = findingsSeverityFilter === severity ? null : severity;
+  filterFindings();
+}
+
+function updateFindingsSevFilterUi() {
+  $$('.sev-filter-chip').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.sev === findingsSeverityFilter);
+  });
+  $('#findingsSevClear')?.classList.toggle('hidden', !findingsSeverityFilter);
 }
 
 function buildManualFixPrompt(finding, repo) {
@@ -1646,7 +1670,7 @@ async function goToRepoFindings(scanId, repo) {
   await showFindingsView();
   const filterRepo = repo ?? full.repo;
   $('#findingsSearchInput').value = filterRepo;
-  filterFindings(filterRepo);
+  filterFindings();
   refreshHistory();
   history.replaceState(null, '', `/app/?scan=${full.id}&view=findings`);
   return full;
@@ -1696,18 +1720,26 @@ function openIssuesModal(repoFullName) {
   $('#issuesModal').classList.remove('hidden');
 }
 
-function filterFindings(query) {
-  const q = query.toLowerCase().trim();
+function filterFindings() {
+  const q = ($('#findingsSearchInput')?.value ?? '').trim().toLowerCase();
   const source = allFindings ?? [];
-  if (!q) return renderFindingsTable(source);
-  const filtered = source.filter(
-    (f) =>
-      f.title.toLowerCase().includes(q) ||
-      f.message.toLowerCase().includes(q) ||
-      f.file.toLowerCase().includes(q) ||
-      f.ruleId.toLowerCase().includes(q) ||
-      (f._scanRepo ?? '').toLowerCase().includes(q)
-  );
+  let filtered = source;
+
+  if (findingsSeverityFilter) {
+    filtered = filtered.filter((f) => f.severity === findingsSeverityFilter);
+  }
+
+  if (q) {
+    filtered = filtered.filter(
+      (f) =>
+        f.title.toLowerCase().includes(q) ||
+        f.message.toLowerCase().includes(q) ||
+        f.file.toLowerCase().includes(q) ||
+        f.ruleId.toLowerCase().includes(q) ||
+        (f._scanRepo ?? '').toLowerCase().includes(q)
+    );
+  }
+
   renderFindingsTable(filtered);
 }
 
@@ -1946,7 +1978,17 @@ $('#issuesViewFeedBtn').addEventListener('click', async () => {
     toast(e.message || 'Could not load scan');
   }
 });
-$('#findingsSearchInput').addEventListener('input', (e) => filterFindings(e.target.value));
+$('#findingsSearchInput').addEventListener('input', () => filterFindings());
+
+$('#findingsSevFilters')?.addEventListener('click', (e) => {
+  const chip = e.target.closest('.sev-filter-chip');
+  if (chip?.dataset.sev) setFindingsSeverityFilter(chip.dataset.sev);
+});
+
+$('#findingsSevClear')?.addEventListener('click', () => {
+  findingsSeverityFilter = null;
+  filterFindings();
+});
 $('#repoSearchInput').addEventListener('input', (e) => filterRepos(e.target.value));
 
 $('#settingsThemeBtn').addEventListener('click', toggleTheme);

@@ -509,9 +509,16 @@
           <div class="panel-toolbar">
             <div>
               <h2>Findings</h2>
-              <span class="panel-meta">Ranked by severity · repo shown per row · click A-Fix to resolve</span>
+              <span class="panel-meta">Ranked by severity · click a severity badge to filter · A-Fix to resolve</span>
             </div>
-            <div class="search-wrap search-wrap-inline">
+            <div class="findings-toolbar-right">
+              <div class="findings-sev-filters" id="findingsSevFilters" aria-label="Filter by severity">
+                <button type="button" class="sev-filter-chip sev-critical" data-sev="critical">Critical</button>
+                <button type="button" class="sev-filter-chip sev-warning" data-sev="warning">High</button>
+                <button type="button" class="sev-filter-chip sev-info" data-sev="info">Info</button>
+                <button type="button" class="sev-filter-clear hidden" id="findingsSevClear">Clear</button>
+              </div>
+              <div class="search-wrap search-wrap-inline">
               <span class="search-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg></span>
               <input type="search" class="search-input" id="findingsSearchInput" placeholder="Filter findings…">
             </div>
