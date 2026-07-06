@@ -129,7 +129,9 @@ app.get('/app', async (req, reply) => {
 
 app.get('/app/', async (req, reply) => {
   if (!getSession(req)) return reply.redirect('/login');
-  return reply.sendFile('index.html', PUBLIC_DIR);
+  return reply
+    .header('Cache-Control', 'no-store, no-cache, must-revalidate')
+    .sendFile('index.html', PUBLIC_DIR);
 });
 
 // Dashboard static assets at /app/* (JS, CSS — not index.html)

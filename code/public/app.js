@@ -541,6 +541,7 @@ function hideAllPanels() {
   $('#autofixQueueView').classList.add('hidden');
   $('#scannersView').classList.add('hidden');
   $('#integrationsView').classList.add('hidden');
+  window.AegisModules?.hideModuleViews?.();
   updateOverviewGuideHeaderBtn();
 }
 
@@ -954,6 +955,7 @@ function showPRView() {
   setActiveNav('navPR');
   setModulePill('code');
   renderPRScans();
+  history.replaceState(null, '', '/app/?view=pr');
 }
 
 function showAutofixQueueView() {
@@ -968,6 +970,7 @@ function showAutofixQueueView() {
   setActiveNav('navAutofix');
   setModulePill('code');
   renderAutofixQueue();
+  history.replaceState(null, '', '/app/?view=autofix');
 }
 
 function showScannersView() {
@@ -1185,12 +1188,12 @@ function showReposView() {
   }
   const q = $('#repoSearchInput').value.trim();
   if (q && allRepos.length) filterRepos(q);
+  history.replaceState(null, '', '/app/?view=repos');
 }
 
 function showFeedView() {
   currentView = 'feed';
   hideAllPanels();
-  window.AegisModules?.hideModuleViews?.();
   $('#overviewGuideWrap')?.classList.remove('hidden');
   setActiveNav('navFeed');
   setModulePill('code');
