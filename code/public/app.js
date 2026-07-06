@@ -1311,12 +1311,12 @@ function openScanModal(tab) {
 }
 
 async function connectWithPat() {
-  const token = $('#patInput').value.trim();
+  const token = $('#authPatInput').value.trim();
   if (!token) return toast('Enter a token');
   try {
     await api('/api/auth/pat', { method: 'POST', body: JSON.stringify({ token }) });
     $('#authModal').classList.add('hidden');
-    $('#patInput').value = '';
+    $('#authPatInput').value = '';
     await loadAuth();
     toast(`Connected as @${githubUser.login}`);
     showReposView();
@@ -1882,6 +1882,23 @@ $('#autofixPanel .modal-close').addEventListener('click', () => closeAutofixPane
 $$('[data-close-issues]').forEach((el) => el.addEventListener('click', () => $('#issuesModal').classList.add('hidden')));
 $$('[data-close-scan]').forEach((el) => el.addEventListener('click', () => $('#scanModal').classList.add('hidden')));
 $$('[data-close-auth]').forEach((el) => el.addEventListener('click', () => $('#authModal').classList.add('hidden')));
+
+function closeTopModal() {
+  if (!$('#scanModal').classList.contains('hidden')) $('#scanModal').classList.add('hidden');
+  else if (!$('#authModal').classList.contains('hidden')) $('#authModal').classList.add('hidden');
+  else if (!$('#issuesModal').classList.contains('hidden')) $('#issuesModal').classList.add('hidden');
+  else if (!$('#cloudScanModal')?.classList.contains('hidden')) $('#cloudScanModal').classList.add('hidden');
+  else if (!$('#attackProbeModal')?.classList.contains('hidden')) $('#attackProbeModal').classList.add('hidden');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!$('#autofixPanel').classList.contains('hidden') && $('#autofixPanel').classList.contains('is-open')) {
+    closeAutofixPanel();
+    return;
+  }
+  closeTopModal();
+});
 $('#applyFixBtn').addEventListener('click', applyAutofix);
 $('#bulkScanBtn').addEventListener('click', runBulkScan);
 $('#copyManualPromptBtn').addEventListener('click', () => {

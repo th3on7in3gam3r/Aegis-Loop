@@ -1035,15 +1035,22 @@
   </div>
 
   <!-- Scan modal -->
-  <div id="scanModal" class="modal hidden">
+  <div id="scanModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="scanModalTitle">
     <div class="modal-backdrop" data-close-scan></div>
-    <div class="modal-panel modal-sm">
+    <div class="modal-panel">
       <div class="modal-header">
-        <div>
-          <h3>New scan</h3>
-          <p class="modal-subtitle">Analyze code for security vulnerabilities</p>
+        <div class="modal-header-brand">
+          <span class="modal-icon modal-icon-scan" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 7v6M7 10h6"/></svg>
+          </span>
+          <div>
+            <h3 id="scanModalTitle">New scan</h3>
+            <p class="modal-subtitle">Analyze code for security vulnerabilities</p>
+          </div>
         </div>
-        <button type="button" class="modal-close" data-close-scan>×</button>
+        <button type="button" class="modal-close" data-close-scan aria-label="Close">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+        </button>
       </div>
       <div class="modal-body">
         <div class="scan-tabs">
@@ -1052,12 +1059,21 @@
           <button type="button" class="tab" data-tab="pr">Pull request</button>
         </div>
         <form id="scanForm" class="scan-form tab-panel" data-panel="repo">
-          <label for="repoInput">Repository</label>
-          <input id="repoInput" type="text" placeholder="owner/repo" list="repoList">
-          <datalist id="repoList"></datalist>
-          <label for="branchInput">Branch</label>
-          <input id="branchInput" type="text" value="main">
-          <button type="submit" class="btn-primary btn-block" id="scanBtn">Start scan</button>
+          <div class="modal-fields">
+            <div class="modal-field modal-field-grow">
+              <label for="repoInput">Repository</label>
+              <input id="repoInput" type="text" placeholder="owner/repo" list="repoList">
+              <datalist id="repoList"></datalist>
+            </div>
+            <div class="modal-field modal-field-branch">
+              <label for="branchInput">Branch</label>
+              <input id="branchInput" type="text" value="main">
+            </div>
+          </div>
+          <div class="modal-tab-actions">
+            <button type="button" class="btn-ghost btn-sm" data-close-scan>Cancel</button>
+            <button type="submit" class="btn-primary" id="scanBtn">Start scan</button>
+          </div>
         </form>
         <div class="scan-form tab-panel hidden" data-panel="all">
           <p class="scan-help">Scan every repository you have access to on GitHub. Each repo is scanned sequentially — large accounts may take several minutes.</p>
@@ -1066,52 +1082,88 @@
             <div class="bulk-progress-bar"><div id="bulkProgressFill"></div></div>
             <p id="bulkProgressText">Starting…</p>
           </div>
-          <button type="button" class="btn-primary btn-block" id="bulkScanBtn">Scan all repositories</button>
+          <div class="modal-tab-actions">
+            <button type="button" class="btn-ghost btn-sm" data-close-scan>Cancel</button>
+            <button type="button" class="btn-primary" id="bulkScanBtn">Scan all repositories</button>
+          </div>
         </div>
         <form id="prForm" class="scan-form tab-panel hidden" data-panel="pr">
-          <label for="prInput">Pull request</label>
-          <input id="prInput" type="text" placeholder="owner/repo#123 or PR URL">
+          <div class="modal-field modal-field-full">
+            <label for="prInput">Pull request</label>
+            <input id="prInput" type="text" placeholder="owner/repo#123 or PR URL">
+          </div>
           <label class="checkbox-row compact">
             <input type="checkbox" id="publishToPr" checked>
             Post results as PR comment + check
           </label>
-          <button type="submit" class="btn-primary btn-block" id="prScanBtn">Scan pull request</button>
+          <div class="modal-tab-actions">
+            <button type="button" class="btn-ghost btn-sm" data-close-scan>Cancel</button>
+            <button type="submit" class="btn-primary" id="prScanBtn">Scan pull request</button>
+          </div>
         </form>
       </div>
     </div>
   </div>
 
   <!-- Auth modal -->
-  <div id="authModal" class="modal hidden">
+  <div id="authModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
     <div class="modal-backdrop" data-close-auth></div>
-    <div class="modal-panel modal-sm">
+    <div class="modal-panel">
       <div class="modal-header">
-        <div><h3>Connect GitHub</h3><p class="modal-subtitle">Required to scan private repositories</p></div>
-        <button type="button" class="modal-close" data-close-auth>×</button>
+        <div class="modal-header-brand">
+          <span class="modal-icon modal-icon-auth" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 0C4.48 0 0 4.48 0 10c0 4.42 2.87 8.17 6.84 9.49.5.09.66-.22.66-.48 0-.24-.01-.87-.01-1.7-2.78.62-3.37-1.36-3.37-1.36-.45-1.16-1.12-1.47-1.12-1.47-.92-.64.07-.63.07-.63 1.02.07 1.55 1.05 1.55 1.05.9 1.55 2.36 1.1 2.94.84.09-.66.35-1.1.63-1.35-2.22-.26-4.56-1.12-4.56-4.98 0-1.1.39-1.99 1.03-2.69-.1-.26-.45-1.3.1-2.7 0 0 .84-.27 2.75 1.02A9.58 9.58 0 0110 4.84c.85.004 1.71.12 2.51.35 1.91-1.29 2.75-1.02 2.75-1.02.55 1.4.2 2.44.1 2.7.64.7 1.03 1.59 1.03 2.69 0 3.87-2.34 4.72-4.57 4.97.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.8 0 .27.16.58.67.48A10.01 10.01 0 0020 10c0-5.52-4.48-10-10-10z"/></svg>
+          </span>
+          <div>
+            <h3 id="authModalTitle">Connect GitHub</h3>
+            <p class="modal-subtitle">Required to scan private repositories</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-auth aria-label="Close">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+        </button>
       </div>
       <div class="modal-body">
-        <a href="/api/auth/github" class="btn-primary btn-block hidden" id="oauthBtn">Continue with GitHub</a>
-        <div class="divider-text" id="patDivider">or paste a personal access token</div>
-        <label for="patInput">Personal access token</label>
-        <input id="patInput" type="password" placeholder="github_pat_...">
-        <button type="button" class="btn-primary btn-block" id="patSubmitBtn" style="margin-top:12px">Connect</button>
+        <a href="/api/auth/github" class="auth-oauth-btn hidden" id="oauthBtn">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          Continue with GitHub
+        </a>
+        <div class="divider-text" id="patDivider">or paste a token</div>
+        <div class="modal-field modal-field-full">
+          <label for="authPatInput">Personal access token</label>
+          <input id="authPatInput" type="password" placeholder="github_pat_..." autocomplete="off">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-ghost btn-sm" data-close-auth>Cancel</button>
+        <button type="button" class="btn-primary" id="patSubmitBtn">Connect</button>
       </div>
     </div>
   </div>
 
   <!-- Issues modal -->
-  <div id="issuesModal" class="modal hidden">
+  <div id="issuesModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="issuesModalTitle">
     <div class="modal-backdrop" data-close-issues></div>
-    <div class="modal-panel">
+    <div class="modal-panel modal-lg">
       <div class="modal-header">
-        <div><h3 id="issuesModalTitle">Repository issues</h3><p class="modal-subtitle" id="issuesModalSummary"></p></div>
-        <button type="button" class="modal-close" data-close-issues>×</button>
+        <div class="modal-header-brand">
+          <span class="modal-icon modal-icon-issues" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3l7 12H3L10 3z"/><path d="M10 8v4M10 14.5v.5"/></svg>
+          </span>
+          <div>
+            <h3 id="issuesModalTitle">Repository issues</h3>
+            <p class="modal-subtitle" id="issuesModalSummary"></p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-issues aria-label="Close">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+        </button>
       </div>
       <div class="modal-body modal-body-flush">
         <ul id="issuesModalList" class="issues-list"></ul>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn-outline" data-close-issues>Close</button>
+        <button type="button" class="btn-ghost btn-sm" data-close-issues>Close</button>
         <button type="button" class="btn-primary" id="issuesViewFeedBtn">View in feed</button>
       </div>
     </div>
@@ -1122,11 +1174,13 @@
     <div class="side-panel-backdrop"></div>
     <aside class="side-panel-drawer">
       <div class="side-panel-header">
-        <div>
+        <div class="side-panel-header-brand">
           <p class="panel-eyebrow">A-Fix</p>
           <h3 id="panelTitle">Auto remediation</h3>
         </div>
-        <button type="button" class="modal-close">×</button>
+        <button type="button" class="modal-close" aria-label="Close">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+        </button>
       </div>
       <div class="side-panel-body">
         <div class="ai-warning-banner">
@@ -1156,36 +1210,70 @@
   </div>
 
   <!-- Cloud scan modal -->
-  <div id="cloudScanModal" class="modal hidden">
+  <div id="cloudScanModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="cloudScanModalTitle">
     <div class="modal-backdrop" data-close-cloud-scan></div>
-    <div class="modal-panel modal-sm">
+    <div class="modal-panel">
       <div class="modal-header">
-        <div><h3>Scan cloud IaC</h3><p class="modal-subtitle">Terraform, K8s, Docker Compose in a GitHub repo</p></div>
-        <button type="button" class="modal-close" data-close-cloud-scan>×</button>
+        <div class="modal-header-brand">
+          <span class="modal-icon modal-icon-cloud" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 14h9a3 3 0 000-6 3.5 3.5 0 00-6.6-1.2A2.5 2.5 0 006 14z"/></svg>
+          </span>
+          <div>
+            <h3 id="cloudScanModalTitle">Scan cloud IaC</h3>
+            <p class="modal-subtitle">Terraform, K8s, and Docker Compose in a GitHub repo</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-cloud-scan aria-label="Close">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+        </button>
       </div>
       <div class="modal-body">
-        <label for="cloudRepoInput">Repository</label>
-        <input id="cloudRepoInput" type="text" placeholder="owner/repo">
-        <label for="cloudBranchInput">Branch</label>
-        <input id="cloudBranchInput" type="text" value="main">
-        <button type="button" class="btn-primary btn-block" id="cloudScanBtn" style="margin-top:12px">Start cloud scan</button>
+        <div class="modal-fields">
+          <div class="modal-field modal-field-grow">
+            <label for="cloudRepoInput">Repository</label>
+            <input id="cloudRepoInput" type="text" placeholder="owner/repo">
+          </div>
+          <div class="modal-field modal-field-branch">
+            <label for="cloudBranchInput">Branch</label>
+            <input id="cloudBranchInput" type="text" value="main">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-ghost btn-sm" data-close-cloud-scan>Cancel</button>
+        <button type="button" class="btn-primary" id="cloudScanBtn">Start cloud scan</button>
       </div>
     </div>
   </div>
 
   <!-- Attack probe modal -->
-  <div id="attackProbeModal" class="modal hidden">
+  <div id="attackProbeModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="attackProbeModalTitle">
     <div class="modal-backdrop" data-close-attack-probe></div>
-    <div class="modal-panel modal-sm">
+    <div class="modal-panel">
       <div class="modal-header">
-        <div><h3>Probe URL</h3><p class="modal-subtitle">Safe GET probes — one URL per line for batch checks</p></div>
-        <button type="button" class="modal-close" data-close-attack-probe>×</button>
+        <div class="modal-header-brand">
+          <span class="modal-icon modal-icon-attack" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><path d="M10 3v2M10 15v2M3 10h2M15 10h2"/></svg>
+          </span>
+          <div>
+            <h3 id="attackProbeModalTitle">Probe URL</h3>
+            <p class="modal-subtitle">Safe GET probes — one URL per line for batch checks</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-attack-probe aria-label="Close">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+        </button>
       </div>
       <div class="modal-body">
-        <label for="attackTargetInput">Target URL(s)</label>
-        <textarea id="attackTargetInput" class="scan-textarea" rows="4" placeholder="https://staging.yourapp.com&#10;https://yourapp.com"></textarea>
+        <div class="modal-field modal-field-full">
+          <label for="attackTargetInput">Target URL(s)</label>
+          <textarea id="attackTargetInput" class="scan-textarea" rows="4" placeholder="https://staging.yourapp.com&#10;https://yourapp.com"></textarea>
+        </div>
         <p class="modal-hint">Enter one URL per line (max 20). Comma-separated also works.</p>
-        <button type="button" class="btn-primary btn-block" id="attackProbeBtn" style="margin-top:12px">Run probe(s)</button>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-ghost btn-sm" data-close-attack-probe>Cancel</button>
+        <button type="button" class="btn-primary" id="attackProbeBtn">Run probe(s)</button>
       </div>
     </div>
   </div>
