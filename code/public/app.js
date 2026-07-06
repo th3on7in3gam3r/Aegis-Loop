@@ -1368,6 +1368,21 @@ function renderScan(scan) {
   history.replaceState(null, '', `/app/?scan=${scan.id}${currentView !== 'feed' ? `&view=${currentView}` : ''}`);
 }
 
+function findingRepoLabel(repo, mod) {
+  if (!repo || repo === '—') return '—';
+  if (mod === 'attack' && /^https?:\/\//i.test(repo)) {
+    try {
+      const u = new URL(repo);
+      const path = u.pathname === '/' ? '' : u.pathname;
+      const label = `${u.hostname}${path}`;
+      return label.length > 42 ? `${label.slice(0, 39)}…` : label;
+    } catch {
+      return repo;
+    }
+  }
+  return repo;
+}
+
 function renderFindingsTable(findings, opts = {}) {
   const tbody = $('#findingsList');
   tbody.innerHTML = '';
@@ -1382,7 +1397,7 @@ function renderFindingsTable(findings, opts = {}) {
     } else if (!$('#findingsSearchInput')?.value.trim()) {
       msg = 'No open findings — your workspace looks clean.';
     }
-    tbody.innerHTML = `<tr><td colspan="6" class="repos-loading">${msg}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="repos-loading">${msg}</td></tr>`;
     return;
   }
 
@@ -1395,6 +1410,7 @@ function renderFindingsTable(findings, opts = {}) {
 
     const repo = f._scanRepo ?? currentScan?.repo ?? '—';
     const scanId = f._scanId ?? currentScan?.id ?? '';
+    const repoLabel = findingRepoLabel(repo, mod);
 
     let statusCell;
     if (f.fixed) {
@@ -1417,11 +1433,9 @@ function renderFindingsTable(findings, opts = {}) {
         <div class="finding-name">${escapeHtml(f.title)}</div>
         <div class="finding-desc">${escapeHtml(f.message)}</div>
       </td>
+      <td><span class="finding-repo branch-tag" title="${escapeHtml(repo)}">${escapeHtml(repoLabel)}</span></td>
       <td><span class="sev-badge ${sevClass(f.severity)}">${sevLabel(f.severity)}</span></td>
-      <td>
-        <span class="loc-repo">${escapeHtml(repo)}</span>
-        <span class="loc-file">${locLine}</span>
-      </td>
+      <td><span class="loc-file">${locLine}</span></td>
       <td><span class="fix-time">${fixTime(f.severity)}</span></td>
       <td>${statusCell}</td>`;
 
@@ -1971,12 +1985,6 @@ document.addEventListener('click', (e) => {
 $('#navFeed').addEventListener('click', (e) => {
   e.preventDefault();
   showFeedView();
-});
-
-$('#navOverviewGuide')?.addEventListener('click', (e) => {
-  e.preventDefault();
-  showFeedView();
-  window.AegisModules?.revealGuide?.('overview');
 });
 
 $('#navFindings').addEventListener('click', (e) => {
