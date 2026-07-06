@@ -510,6 +510,24 @@ function setActiveNav(id) {
   if (el) el.classList.add('active');
 }
 
+function isOverviewGuideDismissed() {
+  try {
+    return JSON.parse(localStorage.getItem('aegis-guide-dismiss') || '{}').overview === true;
+  } catch {
+    return false;
+  }
+}
+
+function updateOverviewGuideHeaderBtn() {
+  const btn = $('#overviewGuideHeaderBtn');
+  if (!btn) return;
+  const codeModuleActive = !$('#navCodeModule')?.classList.contains('hidden');
+  const show = currentView === 'feed' && codeModuleActive && isOverviewGuideDismissed();
+  btn.classList.toggle('hidden', !show);
+}
+
+window.aegisUpdateOverviewGuideHeader = updateOverviewGuideHeaderBtn;
+
 function hideAllPanels() {
   $('#homeView').classList.add('hidden');
   $('#dashboard').classList.add('hidden');
@@ -523,6 +541,7 @@ function hideAllPanels() {
   $('#autofixQueueView').classList.add('hidden');
   $('#scannersView').classList.add('hidden');
   $('#integrationsView').classList.add('hidden');
+  updateOverviewGuideHeaderBtn();
 }
 
 function countWorkspaceFixable() {
@@ -1166,6 +1185,7 @@ function showFeedView() {
   updateOverviewGuideSteps();
   window.AegisModules?.applyGuideVisibility?.('overview');
   window.AegisModules?.updateShowGuideButtons?.();
+  updateOverviewGuideHeaderBtn();
 
   const m = computeOverviewMetrics();
   if (m.hasData) {
@@ -2027,6 +2047,11 @@ document.addEventListener('click', (e) => {
 $('#navFeed').addEventListener('click', (e) => {
   e.preventDefault();
   showFeedView();
+});
+
+$('#overviewGuideHeaderBtn')?.addEventListener('click', () => {
+  showFeedView();
+  window.AegisModules?.revealGuide?.('overview');
 });
 
 $('#navFindings').addEventListener('click', (e) => {

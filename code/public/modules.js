@@ -55,6 +55,7 @@
     const guide = document.getElementById(`${mod}Guide`);
     if (guide) guide.classList.toggle('hidden', isGuideDismissed(mod));
     updateShowGuideButtons();
+    window.aegisUpdateOverviewGuideHeader?.();
   }
 
   function updateShowGuideButtons() {
