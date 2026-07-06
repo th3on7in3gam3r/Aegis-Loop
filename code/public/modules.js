@@ -141,10 +141,29 @@
     const scanBtn = $('#cloudScanOpenBtn');
     demoBtn?.classList.toggle('hidden', !show);
     $('#cloudGuideSteps [data-step="demo"]')?.classList.toggle('hidden', !show);
+    $('#cloudHomeDemoNote')?.classList.toggle('hidden', !show);
+    $('#cloudHomeProdNote')?.classList.toggle('hidden', show);
     if (scanBtn) {
       scanBtn.classList.toggle('btn-primary', !show);
       scanBtn.classList.toggle('btn-outline', show);
     }
+  }
+
+  function hasCloudScanData() {
+    return cloudScans.some((s) => s.status === 'complete' || s.status === 'failed');
+  }
+
+  function hasAttackScanData() {
+    return attackScans.some((s) => s.status === 'complete' || s.status === 'failed');
+  }
+
+  function hasProtectData() {
+    return protectRules.length > 0;
+  }
+
+  function setModuleDataView(module, hasData) {
+    $(`#${module}HomeWrap`)?.classList.toggle('hidden', hasData);
+    $(`#${module}DataWrap`)?.classList.toggle('hidden', !hasData);
   }
 
   function escapeHtml(s) {
@@ -216,8 +235,10 @@
     $('#cloudView')?.classList.remove('hidden');
     try {
       const scans = await loadCloudScans();
+      const hasData = hasCloudScanData();
+      setModuleDataView('cloud', hasData);
       const latest = scans[0];
-      if (latest?.status === 'complete') {
+      if (hasData && latest?.status === 'complete') {
         updateModuleKpis('cloudStat', latest);
         renderModuleFindings($('#cloudFindingsList'), latest.findings ?? [], 'No misconfigurations found', 'cloud', latest.id);
         window.aegisSetPageContext?.(
@@ -225,8 +246,10 @@
           'Aegis Loop / cloud',
           `${latest.repo} · ${latest.findings?.length ?? 0} finding(s) · score ${latest.stats?.score ?? '—'}`
         );
-      } else {
-        renderModuleFindings($('#cloudFindingsList'), [], cloudScanEmptyMsg(), 'cloud', '');
+      } else if (hasData && latest?.status === 'failed') {
+        renderModuleFindings($('#cloudFindingsList'), [], latest.error || 'Cloud scan failed', 'cloud', latest.id);
+        window.aegisSetPageContext?.('Cloud posture', 'Aegis Loop / cloud', 'Last scan failed — try again');
+      } else if (!hasData) {
         window.aegisSetPageContext?.('Cloud posture', 'Aegis Loop / cloud', 'Scan IaC for public buckets, open security groups, and more');
       }
       await loadProtectData().catch(() => {});
@@ -257,8 +280,10 @@
     $('#attackView')?.classList.remove('hidden');
     try {
       const scans = await loadAttackScans();
+      const hasData = hasAttackScanData();
+      setModuleDataView('attack', hasData);
       const latest = scans[0];
-      if (latest?.status === 'complete') {
+      if (hasData && latest?.status === 'complete') {
         updateModuleKpis('attackStat', latest);
         renderModuleFindings($('#attackFindingsList'), latest.findings ?? [], 'No issues detected', 'attack', latest.id);
         window.aegisSetPageContext?.(
@@ -266,10 +291,10 @@
           'Aegis Loop / attack',
           `${latest.target ?? latest.repo} · score ${latest.stats?.score ?? '—'}`
         );
-      } else if (latest?.status === 'failed') {
+      } else if (hasData && latest?.status === 'failed') {
         renderModuleFindings($('#attackFindingsList'), [], latest.error || 'Probe failed', 'attack', latest.id);
-      } else {
-        renderModuleFindings($('#attackFindingsList'), [], 'Probe a URL to check headers, HTTPS, and surface exposure', 'attack', '');
+        window.aegisSetPageContext?.('Offensive testing', 'Aegis Loop / attack', 'Last probe failed — check the URL');
+      } else if (!hasData) {
         window.aegisSetPageContext?.('Offensive testing', 'Aegis Loop / attack', 'Safe passive probes — no destructive exploits');
       }
       const hist = $('#attackScanHistory');
@@ -299,13 +324,15 @@
     $('#protectView')?.classList.remove('hidden');
     try {
       const data = await loadProtectData();
+      const hasData = hasProtectData();
+      setModuleDataView('protect', hasData);
       const stats = data.stats ?? {};
       $('#protectStatRules').textContent = stats.rules ?? '0';
       $('#protectStatEnabled').textContent = stats.enabled ?? '0';
       $('#protectStatBlocked').textContent = stats.blocked ?? '0';
 
       const rulesBody = $('#protectRulesList');
-      if (rulesBody) {
+      if (rulesBody && hasData) {
         rulesBody.innerHTML = protectRules.length
           ? protectRules.map((r) => `
               <tr>
@@ -334,7 +361,7 @@
       }
 
       const eventsBody = $('#protectEventsList');
-      if (eventsBody) {
+      if (eventsBody && hasData) {
         eventsBody.innerHTML = protectEvents.length
           ? protectEvents.slice(0, 20).map((e) => `
               <tr>
@@ -349,7 +376,9 @@
       window.aegisSetPageContext?.(
         'Runtime firewall',
         'Aegis Loop / protect',
-        `${stats.enabled ?? 0} rules active · ${stats.blocked ?? 0} blocks · live on /app and /api`
+        hasData
+          ? `${stats.enabled ?? 0} rules active · ${stats.blocked ?? 0} blocks · live on /app and /api`
+          : 'Sync rules from Code, Cloud, and Attack findings'
       );
       await Promise.all([loadCloudScans(), loadAttackScans()]).catch(() => {});
       updateProtectGuideSteps();

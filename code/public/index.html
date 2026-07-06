@@ -805,20 +805,49 @@
             </details>
             <a href="#" class="module-guide-doc-link" data-docs-section="cloud">Open full Cloud guide in Documentation →</a>
           </section>
+          <div class="module-actions">
+            <button type="button" class="btn-primary btn-sm" id="cloudDemoBtn">Run demo scan</button>
+            <button type="button" class="btn-outline btn-sm" id="cloudScanOpenBtn">Scan repository IaC</button>
+          </div>
+          <div id="cloudHomeWrap" class="module-home">
+            <section class="home-hero">
+              <div class="home-hero-copy">
+                <p class="home-eyebrow">Aegis Loop / cloud</p>
+                <h2>Catch cloud misconfigs before they go live</h2>
+                <p class="home-lead">Scan Terraform, Kubernetes, and Docker in your GitHub repos — public buckets, open security groups, and wildcard IAM. No AWS or GCP credentials required.</p>
+                <p class="home-note" id="cloudHomeDemoNote">Try the demo for instant sample findings, or scan your own IaC repository.</p>
+                <p class="home-note hidden" id="cloudHomeProdNote">Use <strong>Scan repository IaC</strong> above — demo mode is disabled on production.</p>
+              </div>
+              <div class="home-hero-stats">
+                <div class="home-stat"><span class="home-stat-val">.tf</span><span class="home-stat-label">Terraform</span></div>
+                <div class="home-stat"><span class="home-stat-val">K8s</span><span class="home-stat-label">Kubernetes YAML</span></div>
+                <div class="home-stat"><span class="home-stat-val">Docker</span><span class="home-stat-label">Compose &amp; images</span></div>
+              </div>
+            </section>
+            <section class="home-analytics-teaser" aria-label="Cloud analytics preview">
+              <div class="home-analytics-teaser-copy">
+                <h3>Posture KPIs unlock after your first cloud scan</h3>
+                <p>Critical/high counts, posture score, scan history, and IaC findings replace this section once you run a scan.</p>
+              </div>
+              <ul class="home-analytics-teaser-chips">
+                <li>Critical &amp; high</li>
+                <li>Posture score</li>
+                <li>Scan history</li>
+                <li>IaC findings</li>
+              </ul>
+            </section>
+            <div class="feature-cards">
+              <article class="feature-card"><h3>AWS</h3><p>S3 public ACLs, open security groups, wildcard IAM policies.</p></article>
+              <article class="feature-card"><h3>Kubernetes</h3><p>Public LoadBalancers and exposed cluster services.</p></article>
+              <article class="feature-card"><h3>Docker</h3><p>Ports bound to 0.0.0.0 and compose misconfigs.</p></article>
+            </div>
+          </div>
+          <div id="cloudDataWrap" class="module-data-wrap hidden">
           <div class="module-kpi-grid">
             <div class="kpi-card kpi-critical"><span class="kpi-label">Critical</span><span class="kpi-value" id="cloudStatCrit">0</span></div>
             <div class="kpi-card kpi-high"><span class="kpi-label">High</span><span class="kpi-value" id="cloudStatWarn">0</span></div>
             <div class="kpi-card"><span class="kpi-label">Info</span><span class="kpi-value" id="cloudStatInfo">0</span></div>
             <div class="kpi-card kpi-score"><span class="kpi-label">Posture score</span><span class="kpi-value" id="cloudStatScore">—</span></div>
-          </div>
-          <div class="module-actions">
-            <button type="button" class="btn-primary btn-sm" id="cloudDemoBtn">Run demo scan</button>
-            <button type="button" class="btn-outline btn-sm" id="cloudScanOpenBtn">Scan repository IaC</button>
-          </div>
-          <div class="feature-cards">
-            <article class="feature-card"><h3>AWS</h3><p>S3 public ACLs, open security groups, wildcard IAM policies.</p></article>
-            <article class="feature-card"><h3>Kubernetes</h3><p>Public LoadBalancers and exposed cluster services.</p></article>
-            <article class="feature-card"><h3>Docker</h3><p>Ports bound to 0.0.0.0 and compose misconfigs.</p></article>
           </div>
           <div class="content-panel module-scan-history-panel">
             <div class="panel-toolbar">
@@ -834,6 +863,7 @@
                 <tbody id="cloudFindingsList"><tr><td colspan="5" class="repos-loading">Run a cloud scan to get started</td></tr></tbody>
               </table>
             </div>
+          </div>
           </div>
         </div>
 
@@ -912,19 +942,47 @@
             </details>
             <a href="#" class="module-guide-doc-link" data-docs-section="attack">Open full Attack guide in Documentation →</a>
           </section>
+          <div class="module-actions">
+            <button type="button" class="btn-primary btn-sm" id="attackProbeOpenBtn">Probe URL</button>
+          </div>
+          <div id="attackHomeWrap" class="module-home">
+            <section class="home-hero">
+              <div class="home-hero-copy">
+                <p class="home-eyebrow">Aegis Loop / attack</p>
+                <h2>Test what attackers see on your live site</h2>
+                <p class="home-lead">Send a safe, read-only probe to a URL you control — HTTPS enforcement, security headers, and server disclosure. No exploits, no brute force.</p>
+                <p class="home-note">Start with staging, then production once headers look good.</p>
+              </div>
+              <div class="home-hero-stats">
+                <div class="home-stat"><span class="home-stat-val">HTTPS</span><span class="home-stat-label">TLS &amp; HSTS</span></div>
+                <div class="home-stat"><span class="home-stat-val">CSP</span><span class="home-stat-label">Headers</span></div>
+                <div class="home-stat"><span class="home-stat-val">GET</span><span class="home-stat-label">Safe probes only</span></div>
+              </div>
+            </section>
+            <section class="home-analytics-teaser" aria-label="Attack analytics preview">
+              <div class="home-analytics-teaser-copy">
+                <h3>Surface KPIs unlock after your first probe</h3>
+                <p>Critical/high counts, surface score, probe history, and header findings appear here once you probe a URL.</p>
+              </div>
+              <ul class="home-analytics-teaser-chips">
+                <li>Critical &amp; high</li>
+                <li>Surface score</li>
+                <li>Probe history</li>
+                <li>Header findings</li>
+              </ul>
+            </section>
+            <div class="feature-cards">
+              <article class="feature-card"><h3>HTTPS &amp; headers</h3><p>HSTS, CSP, X-Frame-Options, and nosniff checks.</p></article>
+              <article class="feature-card"><h3>Safe probes</h3><p>GET-only requests — no destructive exploitation.</p></article>
+              <article class="feature-card"><h3>Correlated</h3><p>Findings feed Protect WAF rule generation.</p></article>
+            </div>
+          </div>
+          <div id="attackDataWrap" class="module-data-wrap hidden">
           <div class="module-kpi-grid">
             <div class="kpi-card kpi-critical"><span class="kpi-label">Critical</span><span class="kpi-value" id="attackStatCrit">0</span></div>
             <div class="kpi-card kpi-high"><span class="kpi-label">High</span><span class="kpi-value" id="attackStatWarn">0</span></div>
             <div class="kpi-card"><span class="kpi-label">Info</span><span class="kpi-value" id="attackStatInfo">0</span></div>
             <div class="kpi-card kpi-score"><span class="kpi-label">Surface score</span><span class="kpi-value" id="attackStatScore">—</span></div>
-          </div>
-          <div class="module-actions">
-            <button type="button" class="btn-primary btn-sm" id="attackProbeOpenBtn">Probe URL</button>
-          </div>
-          <div class="feature-cards">
-            <article class="feature-card"><h3>HTTPS &amp; headers</h3><p>HSTS, CSP, X-Frame-Options, and nosniff checks.</p></article>
-            <article class="feature-card"><h3>Safe probes</h3><p>GET-only requests — no destructive exploitation.</p></article>
-            <article class="feature-card"><h3>Correlated</h3><p>Findings feed Protect WAF rule generation.</p></article>
           </div>
           <div class="content-panel module-scan-history-panel">
             <div class="panel-toolbar">
@@ -940,6 +998,7 @@
                 <tbody id="attackFindingsList"><tr><td colspan="5" class="repos-loading">Probe a URL to see results</td></tr></tbody>
               </table>
             </div>
+          </div>
           </div>
         </div>
 
@@ -1016,15 +1075,43 @@
             </details>
             <a href="#" class="module-guide-doc-link" data-docs-section="protect">Open full Protect guide in Documentation →</a>
           </section>
-          <div class="module-kpi-grid">
-            <div class="kpi-card"><span class="kpi-label">Rules</span><span class="kpi-value" id="protectStatRules">0</span></div>
-            <div class="kpi-card kpi-score"><span class="kpi-label">Active</span><span class="kpi-value" id="protectStatEnabled">0</span></div>
-            <div class="kpi-card kpi-critical"><span class="kpi-label">Blocked</span><span class="kpi-value" id="protectStatBlocked">0</span></div>
-          </div>
           <div class="module-actions">
             <button type="button" class="btn-primary btn-sm" id="protectSyncBtn">Sync rules from findings</button>
             <button type="button" class="btn-outline btn-sm" id="protectExportBtn">Export rules (JSON)</button>
             <button type="button" class="btn-outline btn-sm" id="protectDemoBtn">Test block (SQLi)</button>
+          </div>
+          <div id="protectHomeWrap" class="module-home">
+            <section class="home-hero">
+              <div class="home-hero-copy">
+                <p class="home-eyebrow">Aegis Loop / protect</p>
+                <h2>Block attacks at the edge — automatically</h2>
+                <p class="home-lead">Sync WAF rules from your Code, Cloud, and Attack findings — plus built-in SQLi, XSS, and path traversal patterns. Protect runs live on this dashboard.</p>
+                <p class="home-note">Run scans in other modules first, then <strong>Sync rules from findings</strong> above for context-aware coverage.</p>
+              </div>
+              <div class="home-hero-stats">
+                <div class="home-stat"><span class="home-stat-val">SQLi</span><span class="home-stat-label">Built-in</span></div>
+                <div class="home-stat"><span class="home-stat-val">XSS</span><span class="home-stat-label">Built-in</span></div>
+                <div class="home-stat"><span class="home-stat-val">SSRF</span><span class="home-stat-label">From Cloud</span></div>
+              </div>
+            </section>
+            <section class="home-analytics-teaser" aria-label="Protect analytics preview">
+              <div class="home-analytics-teaser-copy">
+                <h3>Rule KPIs unlock after your first sync</h3>
+                <p>Active rule count, block totals, the WAF rules table, and block log appear here once you sync rules from findings.</p>
+              </div>
+              <ul class="home-analytics-teaser-chips">
+                <li>Rules &amp; active</li>
+                <li>Block count</li>
+                <li>WAF rules</li>
+                <li>Block log</li>
+              </ul>
+            </section>
+          </div>
+          <div id="protectDataWrap" class="module-data-wrap hidden">
+          <div class="module-kpi-grid">
+            <div class="kpi-card"><span class="kpi-label">Rules</span><span class="kpi-value" id="protectStatRules">0</span></div>
+            <div class="kpi-card kpi-score"><span class="kpi-label">Active</span><span class="kpi-value" id="protectStatEnabled">0</span></div>
+            <div class="kpi-card kpi-critical"><span class="kpi-label">Blocked</span><span class="kpi-value" id="protectStatBlocked">0</span></div>
           </div>
           <p class="module-note hidden" id="protectInlineNote">Protect runs inline on this dashboard — see the guide above for how it works.</p>
           <div class="content-panel">
@@ -1044,6 +1131,7 @@
                 <tbody id="protectEventsList"><tr><td colspan="4" class="repos-loading">No blocks yet</td></tr></tbody>
               </table>
             </div>
+          </div>
           </div>
         </div>
 
