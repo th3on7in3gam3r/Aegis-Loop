@@ -27,6 +27,26 @@ function toast(msg) {
   setTimeout(() => el.classList.add('hidden'), 4000);
 }
 
+const SWITCH_GITHUB_KEY = 'aegis-github-switch';
+
+async function clearAegisSession() {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  } catch { /* continue */ }
+}
+
+function showSwitchBanner() {
+  $('#switchAccountBanner')?.classList.remove('hidden');
+  $('#switchAccountPanel')?.classList.add('hidden');
+  toast('Signed out of GitHub — click Continue with GitHub to pick an account');
+}
+
+async function signOutOfGithub() {
+  await clearAegisSession();
+  localStorage.setItem(SWITCH_GITHUB_KEY, '1');
+  window.location.href = 'https://github.com/logout';
+}
+
 async function checkAuth() {
   try {
     const res = await fetch('/api/auth/me', { credentials: 'include' });
@@ -84,6 +104,18 @@ $('#togglePat').addEventListener('click', () => {
   $('#patPanel').classList.toggle('hidden');
 });
 
+$('#switchAccountBtn')?.addEventListener('click', () => {
+  $('#switchAccountPanel')?.classList.remove('hidden');
+  $('#switchAccountBtn')?.classList.add('hidden');
+});
+
+$('#cancelSwitchAccount')?.addEventListener('click', () => {
+  $('#switchAccountPanel')?.classList.add('hidden');
+  $('#switchAccountBtn')?.classList.remove('hidden');
+});
+
+$('#confirmGithubLogout')?.addEventListener('click', signOutOfGithub);
+
 $('#patSubmit').addEventListener('click', connectWithPat);
 $('#patInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') connectWithPat();
@@ -91,6 +123,11 @@ $('#patInput').addEventListener('keydown', (e) => {
 
 checkAuth();
 setupOAuth();
+
+if (localStorage.getItem(SWITCH_GITHUB_KEY)) {
+  localStorage.removeItem(SWITCH_GITHUB_KEY);
+  showSwitchBanner();
+}
 
 const loginParams = new URLSearchParams(window.location.search);
 if (loginParams.get('auth') === 'failed') {

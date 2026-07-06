@@ -41,6 +41,23 @@
           Continue with GitHub
         </a>
 
+        <div class="switch-account-banner hidden" id="switchAccountBanner" role="status">
+          <strong>Signed out of GitHub.</strong> Click <em>Continue with GitHub</em> above to sign in with a different account.
+        </div>
+
+        <button type="button" class="switch-account-link" id="switchAccountBtn">Use a different GitHub account</button>
+
+        <div class="switch-account-panel hidden" id="switchAccountPanel">
+          <p><strong>Why am I still on the same account?</strong> Signing out of Aegis Loop only clears our session. GitHub keeps you signed in in this browser.</p>
+          <ol>
+            <li>Click below to sign out of <strong>GitHub</strong></li>
+            <li>Open this login page again if you are not redirected back</li>
+            <li>Click <strong>Continue with GitHub</strong> and sign in with the account you want</li>
+          </ol>
+          <button type="button" class="btn-secondary btn-block" id="confirmGithubLogout">Sign out of GitHub</button>
+          <button type="button" class="switch-account-cancel" id="cancelSwitchAccount">Cancel</button>
+        </div>
+
         <button type="button" class="more-options" id="togglePat">More options</button>
 
         <div class="pat-panel hidden" id="patPanel">
