@@ -637,6 +637,11 @@ function renderOverviewCharts() {
   if (!section) return;
 
   const m = computeOverviewMetrics();
+  if (!m.hasData) {
+    section.classList.add('hidden');
+    return;
+  }
+
   section.classList.remove('hidden');
 
   $('#chartSeverityTotal').textContent = m.hasData ? `${m.open} open` : 'No data';
@@ -696,9 +701,17 @@ function renderOverviewCharts() {
 
   const total = m.fixed + m.open;
   const fixedPct = total ? Math.round((m.fixed / total) * 100) : 0;
-  const openPct = total ? 100 - fixedPct : 100;
-  $('#remediationFixed').style.width = total ? `${fixedPct}%` : '0%';
-  $('#remediationOpen').style.width = total ? `${openPct}%` : '100%';
+  const openPct = total ? 100 - fixedPct : 0;
+  const remediationBar = $('#remediationBar');
+  if (!total) {
+    remediationBar?.classList.add('is-empty');
+    $('#remediationFixed').style.width = '0%';
+    $('#remediationOpen').style.width = '0%';
+  } else {
+    remediationBar?.classList.remove('is-empty');
+    $('#remediationFixed').style.width = `${fixedPct}%`;
+    $('#remediationOpen').style.width = `${openPct}%`;
+  }
   $('#remediationFixedVal').textContent = String(m.fixed);
   $('#remediationOpenVal').textContent = String(m.open);
 }
@@ -736,7 +749,7 @@ function renderHomeChecklist() {
 
 function showHomeView() {
   $('#homeView').classList.remove('hidden');
-  renderOverviewCharts();
+  $('#overviewCharts')?.classList.add('hidden');
   const showDemo = shouldShowCodeDemo();
   setPageContext(
     'Overview',
@@ -1189,6 +1202,7 @@ function showFeedView() {
 
   const m = computeOverviewMetrics();
   if (m.hasData) {
+    $('#homeView').classList.add('hidden');
     $('#statsStrip').classList.remove('hidden');
     updateStatsStripWorkspace();
     setPageContext(
