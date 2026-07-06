@@ -1624,6 +1624,20 @@ async function openAutofixPanel(findingId, scanId) {
   }
 }
 
+async function goToRepoFindings(scanId, repo) {
+  const full = await api(`/api/scans/${scanId}`);
+  currentScan = full;
+  repoScanMap[full.repo] = full;
+  currentView = 'findings';
+  await showFindingsView();
+  const filterRepo = repo ?? full.repo;
+  $('#findingsSearchInput').value = filterRepo;
+  filterFindings(filterRepo);
+  refreshHistory();
+  history.replaceState(null, '', `/app/?scan=${full.id}&view=findings`);
+  return full;
+}
+
 function openIssuesModal(repoFullName) {
   issuesModalRepo = repoFullName;
   const scan = repoScanMap[repoFullName];
@@ -1652,8 +1666,12 @@ function openIssuesModal(repoFullName) {
           <small>${escapeHtml(f.file)}:${f.line} · ${sevLabel(f.severity)}</small>`;
         li.addEventListener('click', async () => {
           $('#issuesModal').classList.add('hidden');
-          renderScan(scan);
-          openAutofixPanel(f.id, scan.id);
+          try {
+            await goToRepoFindings(scan.id, scan.repo);
+            openAutofixPanel(f.id, scan.id);
+          } catch (e) {
+            toast(e.message || 'Could not load scan');
+          }
         });
         list.appendChild(li);
       }
@@ -1908,7 +1926,11 @@ $('#issuesViewFeedBtn').addEventListener('click', async () => {
   const scan = repoScanMap[issuesModalRepo];
   if (!scan?.id || scan.id.startsWith('failed-')) return;
   $('#issuesModal').classList.add('hidden');
-  renderScan(await api(`/api/scans/${scan.id}`));
+  try {
+    await goToRepoFindings(scan.id, issuesModalRepo);
+  } catch (e) {
+    toast(e.message || 'Could not load scan');
+  }
 });
 $('#findingsSearchInput').addEventListener('input', (e) => filterFindings(e.target.value));
 $('#repoSearchInput').addEventListener('input', (e) => filterRepos(e.target.value));
