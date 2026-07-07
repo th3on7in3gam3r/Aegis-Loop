@@ -718,9 +718,9 @@
   .partner-inline-link { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
   .partner-inline-link:hover { color: var(--violet-bright); }
 
-  /* ── Motto (3D loop) ── */
+  /* ── Motto ── */
   .motto {
-    padding: 100px 0 110px;
+    padding: 104px 0 108px;
     position: relative;
     overflow: hidden;
   }
@@ -728,175 +728,171 @@
     content: '';
     position: absolute;
     inset: 0;
-    background:
-      radial-gradient(ellipse 55% 45% at 22% 50%, rgba(124,58,237,0.12), transparent 70%),
-      radial-gradient(ellipse 40% 35% at 78% 40%, rgba(14,165,233,0.08), transparent 65%);
+    background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(124,58,237,0.09), transparent 70%);
     pointer-events: none;
   }
-  .motto-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 56px;
-    align-items: center;
+  .motto-head {
+    text-align: center;
+    max-width: 620px;
+    margin: 0 auto 20px;
     position: relative;
     z-index: 1;
   }
-  @media (max-width: 960px) {
-    .motto-grid { grid-template-columns: 1fr; gap: 40px; }
-    .motto-visual { order: -1; }
-  }
-  .motto-visual {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 380px;
-  }
-  .motto-scene {
+  .motto-emblem {
+    width: 68px;
+    height: 76px;
+    margin: 0 auto 24px;
     position: relative;
-    width: min(100%, 400px);
-    height: 380px;
-    perspective: 1000px;
-    transform-style: preserve-3d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .motto-scene-inner {
-    position: absolute;
-    inset: 0;
-    transform-style: preserve-3d;
-    transition: transform 0.15s ease-out;
-  }
-  .motto-orbit {
-    position: absolute;
-    inset: 24px;
-    transform-style: preserve-3d;
-    animation: motto-orbit-spin 28s linear infinite;
-  }
-  @keyframes motto-orbit-spin {
-    from { transform: rotateX(62deg) rotateZ(0deg); }
-    to { transform: rotateX(62deg) rotateZ(360deg); }
-  }
-  .motto-orbit-ring {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    border: 2px solid rgba(124,58,237,0.35);
-    box-shadow:
-      0 0 40px rgba(124,58,237,0.2),
-      inset 0 0 30px rgba(124,58,237,0.08);
-  }
-  .motto-orbit-ring::after {
-    content: '';
-    position: absolute;
-    inset: 18px;
-    border-radius: 50%;
-    border: 1px dashed rgba(124,58,237,0.2);
-  }
-  .motto-node {
-    position: absolute;
-    inset: 0;
-    transform: rotate(calc(var(--i) * 120deg));
-    pointer-events: none;
-  }
-  .motto-node span {
-    position: absolute;
-    top: -4px;
-    left: 50%;
-    transform: translateX(-50%) rotate(calc(var(--i) * -120deg)) rotateX(-62deg);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--violet-bright);
-    background: rgba(255,255,255,0.95);
-    border: 1px solid var(--violet-ring);
-    padding: 7px 12px;
-    border-radius: 100px;
-    box-shadow: 0 4px 20px rgba(124,58,237,0.18);
-    white-space: nowrap;
-  }
-  .motto-node-find { --i: 0; }
-  .motto-node-fix { --i: 1; }
-  .motto-node-ship { --i: 2; }
-  .motto-shield-wrap {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 140px;
-    height: 160px;
-    margin: -80px 0 0 -70px;
-    transform-style: preserve-3d;
-    animation: motto-shield-float 5s ease-in-out infinite;
-  }
-  @keyframes motto-shield-float {
-    0%, 100% { transform: translateZ(48px) translateY(0) rotateY(-8deg); }
-    50% { transform: translateZ(64px) translateY(-10px) rotateY(8deg); }
-  }
-  .motto-shield {
+  .motto-emblem-shield {
     width: 100%;
     height: 100%;
-    background: linear-gradient(145deg, #8b5cf6 0%, #6d28d9 45%, #4c1d95 100%);
+    background: linear-gradient(155deg, #8b5cf6 0%, #6d28d9 55%, #4c1d95 100%);
     clip-path: polygon(50% 0%, 100% 18%, 100% 62%, 50% 100%, 0% 62%, 0% 18%);
-    box-shadow:
-      0 24px 60px rgba(109,40,217,0.45),
-      0 0 0 1px rgba(255,255,255,0.15) inset,
-      0 -8px 24px rgba(255,255,255,0.12) inset;
     display: flex;
     align-items: center;
     justify-content: center;
-    transform: translateZ(20px);
+    box-shadow:
+      0 16px 40px -8px rgba(109,40,217,0.5),
+      0 0 0 1px rgba(255,255,255,0.14) inset,
+      0 -6px 18px rgba(255,255,255,0.12) inset;
   }
-  .motto-shield svg { width: 52px; height: 52px; opacity: 0.95; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.2)); }
-  .motto-shield-glow {
+  .motto-emblem-shield svg { width: 30px; height: 30px; }
+  .motto-emblem::after {
+    content: '';
     position: absolute;
-    inset: -30%;
-    background: radial-gradient(circle, rgba(139,92,246,0.45), transparent 65%);
-    transform: translateZ(-10px);
-    animation: motto-glow-pulse 4s ease-in-out infinite;
+    inset: -40%;
+    background: radial-gradient(circle, rgba(139,92,246,0.35), transparent 62%);
+    z-index: -1;
+    animation: motto-emblem-pulse 4.5s ease-in-out infinite;
   }
-  @keyframes motto-glow-pulse {
-    0%, 100% { opacity: 0.7; transform: translateZ(-10px) scale(1); }
-    50% { opacity: 1; transform: translateZ(-10px) scale(1.08); }
+  @keyframes motto-emblem-pulse {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.12); }
   }
-  .motto-loop-label {
-    position: absolute;
-    left: 50%;
-    bottom: 8px;
-    transform: translateX(-50%);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--text-muted);
+  .motto-head .section-title { margin-bottom: 14px; }
+
+  .motto-loop {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    align-items: stretch;
+    gap: 0;
+    max-width: 940px;
+    margin: 48px auto 44px;
+    position: relative;
+    z-index: 1;
   }
-  .motto-copy .section-title { margin-bottom: 28px; }
-  .motto-pillars { display: grid; gap: 14px; margin-bottom: 28px; }
-  .motto-pillar {
+  .loop-step {
     background: var(--bg-elevated);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 18px 20px;
-    transition: border-color 0.3s, transform 0.3s var(--ease-out), box-shadow 0.3s;
+    border-radius: 16px;
+    padding: 28px 24px;
+    text-align: left;
+    transition: transform 0.35s var(--ease-out), border-color 0.35s, box-shadow 0.35s;
+    position: relative;
+    overflow: hidden;
   }
-  .motto-pillar:hover {
+  .loop-step::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--violet-ring), transparent);
+    opacity: 0;
+    transition: opacity 0.35s;
+  }
+  .loop-step:hover {
+    transform: translateY(-5px);
     border-color: rgba(124,58,237,0.3);
-    transform: translateX(6px);
-    box-shadow: 0 8px 28px rgba(124,58,237,0.1);
+    box-shadow: 0 16px 44px -18px rgba(124,58,237,0.28);
   }
-  .motto-pillar h3 {
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    margin-bottom: 6px;
+  .loop-step:hover::before { opacity: 1; }
+  .loop-step-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .loop-step-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    background: var(--violet-dim);
+    border: 1px solid var(--violet-ring);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .loop-step-icon svg { width: 20px; height: 20px; stroke: var(--violet-bright); fill: none; stroke-width: 1.9; }
+  .loop-step-num {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+  }
+  .loop-step h3 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 8px; }
+  .loop-step p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+  .loop-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
     color: var(--violet-bright);
   }
-  .motto-pillar p { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin: 0; }
+  .loop-arrow svg { width: 26px; height: 26px; opacity: 0.7; }
+  @media (max-width: 780px) {
+    .motto-loop { grid-template-columns: 1fr; gap: 4px; }
+    .loop-arrow { padding: 4px 0; }
+    .loop-arrow svg { transform: rotate(90deg); }
+  }
+
+  .motto-meaning {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    max-width: 820px;
+    margin: 0 auto 40px;
+    position: relative;
+    z-index: 1;
+  }
+  .meaning-item {
+    flex: 1 1 320px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 22px;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .meaning-key {
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+    color: var(--violet-bright);
+    flex-shrink: 0;
+    min-width: 46px;
+  }
+  .meaning-val { font-size: 14px; color: var(--text-secondary); line-height: 1.55; }
+
+  .motto-tagline-wrap {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
   .motto-tagline {
-    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-size: clamp(1.6rem, 3.4vw, 2.3rem);
     font-weight: 700;
     letter-spacing: -0.03em;
-    line-height: 1.15;
+    line-height: 1.1;
     margin-bottom: 10px;
-    background: linear-gradient(135deg, var(--text-primary) 0%, var(--violet-bright) 55%, var(--violet-glow) 100%);
+  }
+  .motto-tagline .g {
+    background: linear-gradient(135deg, var(--violet-bright), var(--violet-glow));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -905,11 +901,9 @@
     font-size: 15px;
     color: var(--text-secondary);
     line-height: 1.6;
-    max-width: 42ch;
   }
   @media (prefers-reduced-motion: reduce) {
-    .motto-orbit, .motto-shield-wrap, .motto-shield-glow { animation: none; }
-    .motto-scene-inner { transform: none !important; }
+    .motto-emblem::after { animation: none; }
   }
 
   /* ── Contact ── */
@@ -1264,43 +1258,73 @@
 
   <!-- MOTTO -->
   <section class="motto divider" id="motto">
-    <div class="container motto-grid">
-      <div class="motto-visual reveal">
-        <div class="motto-scene" id="mottoScene" aria-hidden="true">
-          <div class="motto-scene-inner" id="mottoSceneInner">
-            <div class="motto-orbit">
-              <div class="motto-orbit-ring"></div>
-              <span class="motto-node motto-node-find"><span>Find</span></span>
-              <span class="motto-node motto-node-fix"><span>Fix</span></span>
-              <span class="motto-node motto-node-ship"><span>Ship</span></span>
-            </div>
-            <div class="motto-shield-wrap">
-              <div class="motto-shield-glow"></div>
-              <div class="motto-shield">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z" fill="rgba(255,255,255,0.2)" stroke="#fff" stroke-width="1.2"/>
-                  <path d="M12 8v5M9.5 10.5h5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-              </div>
-            </div>
-            <span class="motto-loop-label">The loop</span>
+    <div class="container">
+      <div class="motto-head reveal">
+        <div class="motto-emblem" aria-hidden="true">
+          <div class="motto-emblem-shield">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z" fill="rgba(255,255,255,0.18)" stroke="#fff" stroke-width="1.2"/>
+              <path d="M12 8v5M9.5 10.5h5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
           </div>
         </div>
-      </div>
-      <div class="motto-copy reveal reveal-d1">
         <span class="section-label">Our motto</span>
-        <h2 class="section-title">Shield the stack.<br>Close the loop.</h2>
-        <div class="motto-pillars">
-          <article class="motto-pillar">
-            <h3>Aegis</h3>
-            <p>Shield, protection — the classic security metaphor behind everything we build.</p>
-          </article>
-          <article class="motto-pillar">
-            <h3>Loop</h3>
-            <p>Continuous cycle — find → fix → ship. Four modules, one closed workflow.</p>
-          </article>
+        <h2 class="section-title">Shield the stack. Close the loop.</h2>
+        <p class="section-desc" style="margin:0 auto">Aegis is the shield. The loop is how we keep it up — find what's exploitable, fix it where you already work, and ship with the checks green. Then run it again.</p>
+      </div>
+
+      <div class="motto-loop reveal reveal-d1">
+        <article class="loop-step">
+          <div class="loop-step-top">
+            <div class="loop-step-icon">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            </div>
+            <span class="loop-step-num">01</span>
+          </div>
+          <h3>Find it.</h3>
+          <p>Scan code, cloud IaC, and authorized URLs for the vulnerabilities that actually matter.</p>
+        </article>
+        <div class="loop-arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </div>
-        <p class="motto-tagline">Find it. Fix it. Ship it.</p>
+        <article class="loop-step">
+          <div class="loop-step-top">
+            <div class="loop-step-icon">
+              <svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 005.4-5.4l-2.3 2.3-2-2 2.3-2.3z"/></svg>
+            </div>
+            <span class="loop-step-num">02</span>
+          </div>
+          <h3>Fix it.</h3>
+          <p>Template and AI patches land as pull requests on Team — review, merge, move on.</p>
+        </article>
+        <div class="loop-arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+        <article class="loop-step">
+          <div class="loop-step-top">
+            <div class="loop-step-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </div>
+            <span class="loop-step-num">03</span>
+          </div>
+          <h3>Ship it.</h3>
+          <p>Commit checks and PR comments keep merges safe — protection without the drag.</p>
+        </article>
+      </div>
+
+      <div class="motto-meaning reveal reveal-d2">
+        <div class="meaning-item">
+          <span class="meaning-key">Aegis</span>
+          <span class="meaning-val">Shield, protection — the classic security metaphor behind everything we build.</span>
+        </div>
+        <div class="meaning-item">
+          <span class="meaning-key">Loop</span>
+          <span class="meaning-val">Continuous cycle — find → fix → ship, never one-and-done.</span>
+        </div>
+      </div>
+
+      <div class="motto-tagline-wrap reveal reveal-d3">
+        <p class="motto-tagline">Find it. <span class="g">Fix it.</span> Ship it.</p>
         <p class="motto-tagline-sub">Dev-first, action-oriented — not compliance theater.</p>
       </div>
     </div>
@@ -1870,21 +1894,6 @@
     });
   }, { threshold: 0.5 });
   counters.forEach(el => countIO.observe(el));
-
-  // Motto 3D parallax (mouse)
-  const mottoScene = document.getElementById('mottoScene');
-  const mottoSceneInner = document.getElementById('mottoSceneInner');
-  if (mottoScene && mottoSceneInner && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    mottoScene.addEventListener('mousemove', (e) => {
-      const rect = mottoScene.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width - 0.5;
-      const y = (e.clientY - rect.top) / rect.height - 0.5;
-      mottoSceneInner.style.transform = `rotateY(${x * 14}deg) rotateX(${-y * 10}deg)`;
-    });
-    mottoScene.addEventListener('mouseleave', () => {
-      mottoSceneInner.style.transform = '';
-    });
-  }
 
   // Contact form — opens mail client (no backend inbox yet)
   const contactForm = document.getElementById('contactForm');
