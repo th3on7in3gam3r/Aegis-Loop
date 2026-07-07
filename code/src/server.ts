@@ -44,6 +44,20 @@ import {
   resolveToken,
   setSessionCookie,
 } from './session.js';
+import { requireAuth, resolveAuth } from './billing/auth.js';
+import { assertAutofixAccess, assertModuleAccess, canScanRepo, planSummary } from './billing/limits.js';
+import {
+  createApiKey,
+  getAccount,
+  loadAccountStore,
+  revokeApiKey,
+} from './billing/store.js';
+import {
+  createBillingPortalSession,
+  createCheckoutSession,
+  handleStripeWebhook,
+  stripeConfigured,
+} from './billing/stripe.js';
 import { getScan, listScans, loadStore, saveScan, updateFinding, updateScanMeta } from './store.js';
 import {
   appBase,
@@ -62,6 +76,20 @@ const app = Fastify({ logger: true });
 
 loadStore();
 loadProtectStore();
+loadAccountStore();
+
+function tagScan<T extends import('./types.js').ScanResult>(scan: T, login: string): T {
+  scan.userLogin = login;
+  return scan;
+}
+
+function planLimitReply(reply: import('fastify').FastifyReply, message: string) {
+  return reply.status(402).send({
+    error: message,
+    code: 'PLAN_LIMIT',
+    upgradeUrl: `${config.appUrl}/#pricing`,
+  });
+}
 
 await app.register(fastifyCookie, { secret: config.sessionSecret });
 await app.register(cors, { origin: true });
@@ -143,7 +171,8 @@ await app.register(fastifyStatic, {
 
 // Preserve raw body for webhook signature verification
 app.addHook('preParsing', async (request, _reply, payload) => {
-  if (!request.url.startsWith('/api/webhooks/github')) return payload;
+  const path = request.url.split('?')[0];
+  if (!path.startsWith('/api/webhooks/github') && !path.startsWith('/api/billing/webhook')) return payload;
 
   const chunks: Buffer[] = [];
   for await (const chunk of payload) {
@@ -195,11 +224,21 @@ app.get('/api/health', async () => ({
   },
   osv: { enabled: true },
   protect: protectStats(),
+  billing: {
+    stripe: stripeConfigured(),
+    teamPriceMonthly: 29,
+  },
 }));
 
 app.addHook('preHandler', async (req, reply) => {
   const path = req.url.split('?')[0];
-  if (path.startsWith('/api/auth') || path.startsWith('/api/webhooks')) return;
+  if (
+    path.startsWith('/api/auth') ||
+    path.startsWith('/api/webhooks') ||
+    path.startsWith('/api/billing/webhook')
+  ) {
+    return;
+  }
   if (!path.startsWith('/api/') && !path.startsWith('/app')) return;
 
   const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?') + 1) : '';
@@ -223,12 +262,14 @@ app.addHook('preHandler', async (req, reply) => {
 app.get('/api/auth/me', async (req) => {
   const session = getSession(req);
   if (!session) return { connected: false };
+  const account = getAccount(session.login);
   return {
     connected: true,
     login: session.login,
     name: session.name,
     avatarUrl: session.avatarUrl,
     oauthAvailable: oauthConfigured(),
+    plan: planSummary(account),
   };
 });
 
@@ -289,39 +330,53 @@ app.get('/api/github/repos', async (req, reply) => {
 // ── Scans ──
 
 app.get('/api/scans', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
-  return listScans('code');
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  return listScans('code', auth.login);
 });
 
 app.get('/api/scans/:id', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
   const { id } = req.params as { id: string };
   const scan = getScan(id);
   if (!scan) return reply.status(404).send({ error: 'Scan not found' });
+  if (scan.userLogin && scan.userLogin !== auth.login) {
+    return reply.status(404).send({ error: 'Scan not found' });
+  }
   return scan;
 });
 
 app.post('/api/scans/demo', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
-  const scan = await scanDirectory(config.demoRepo, 'aegis-loop/sample-app', 'main');
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  const scan = tagScan(await scanDirectory(config.demoRepo, 'aegis-loop/sample-app', 'main'), auth.login);
   saveScan(scan);
   return scan;
 });
 
 app.post('/api/scans', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
   const body = req.body as { repo?: string; branch?: string };
   if (!body.repo?.trim()) {
     return reply.status(400).send({ error: 'repo is required (owner/repo or GitHub URL)' });
   }
 
-  const token = resolveGithubToken(req);
+    const token = resolveGithubToken(req, req.headers['x-github-token'] as string | undefined, (body as { githubToken?: string }).githubToken);
   let tempDir: string | undefined;
 
   try {
     const parsed = parseRepoInput(body.repo);
+    const repoName = `${parsed.owner}/${parsed.repo}`;
+    const allowed = canScanRepo(auth.account, repoName);
+    if (!allowed.ok) return planLimitReply(reply, allowed.reason);
+
     tempDir = await cloneRepo(parsed.owner, parsed.repo, body.branch ?? 'main', token);
-    const scan = await scanDirectory(tempDir, `${parsed.owner}/${parsed.repo}`, body.branch ?? 'main');
+    const scan = tagScan(
+      await scanDirectory(tempDir, repoName, body.branch ?? 'main'),
+      auth.login
+    );
     saveScan(scan);
     return scan;
   } catch (err) {
@@ -333,9 +388,10 @@ app.post('/api/scans', async (req, reply) => {
 });
 
 app.post('/api/scans/pull-request', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
   const body = req.body as { pr?: string; owner?: string; repo?: string; pullNumber?: number; publish?: boolean };
-  const token = resolveGithubToken(req);
+    const token = resolveGithubToken(req, req.headers['x-github-token'] as string | undefined, (body as { githubToken?: string }).githubToken);
 
   let owner: string;
   let repo: string;
@@ -354,12 +410,16 @@ app.post('/api/scans/pull-request', async (req, reply) => {
     return reply.status(400).send({ error: 'Provide pr (URL or owner/repo#123) or owner/repo/pullNumber' });
   }
 
+  const repoName = `${owner}/${repo}`;
+  const allowed = canScanRepo(auth.account, repoName);
+  if (!allowed.ok) return planLimitReply(reply, allowed.reason);
+
   let tempDir: string | undefined;
 
   try {
     const pr = await fetchPullRequest(token, owner, repo, pullNumber);
     tempDir = await clonePullRequest(owner, repo, pr.headBranch, token);
-    const scan = await scanDirectory(tempDir, `${owner}/${repo}`, pr.headBranch);
+    const scan = tagScan(await scanDirectory(tempDir, repoName, pr.headBranch), auth.login);
     scan.pullRequest = pr;
     saveScan(scan);
 
@@ -399,7 +459,11 @@ app.post('/api/scans/:scanId/github/publish', async (req, reply) => {
 });
 
 app.post('/api/scans/:scanId/findings/:findingId/autofix/generate', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  const autofixBlock = assertAutofixAccess(auth.account.plan);
+  if (autofixBlock) return planLimitReply(reply, autofixBlock);
+
   const { scanId, findingId } = req.params as { scanId: string; findingId: string };
   const scan = getScan(scanId);
   if (!scan) return reply.status(404).send({ error: 'Scan not found' });
@@ -420,7 +484,11 @@ app.post('/api/scans/:scanId/findings/:findingId/autofix/generate', async (req, 
 });
 
 app.post('/api/scans/:scanId/findings/:findingId/autofix', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  const autofixBlock = assertAutofixAccess(auth.account.plan);
+  if (autofixBlock) return planLimitReply(reply, autofixBlock);
+
   const { scanId, findingId } = req.params as { scanId: string; findingId: string };
   const body = (req.body ?? {}) as { createPr?: boolean; githubToken?: string };
 
@@ -504,30 +572,46 @@ app.post('/api/scans/:scanId/findings/:findingId/autofix', async (req, reply) =>
 // ── Cloud module ──
 
 app.get('/api/cloud/scans', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
-  return listScans('cloud');
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  return listScans('cloud', auth.login);
 });
 
 app.get('/api/cloud/scans/:id', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
   const { id } = req.params as { id: string };
   const scan = getScan(id);
   if (!scan || (scan.module ?? 'code') !== 'cloud') {
+    return reply.status(404).send({ error: 'Cloud scan not found' });
+  }
+  if (scan.userLogin && scan.userLogin !== auth.login) {
     return reply.status(404).send({ error: 'Cloud scan not found' });
   }
   return scan;
 });
 
 app.post('/api/cloud/scans/demo', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
-  const scan = await scanCloudDirectory(config.cloudDemoRepo, 'aegis-loop/cloud-demo', 'main');
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  const moduleBlock = assertModuleAccess(auth.account.plan, 'cloud');
+  if (moduleBlock) return planLimitReply(reply, moduleBlock);
+
+  const scan = tagScan(
+    await scanCloudDirectory(config.cloudDemoRepo, 'aegis-loop/cloud-demo', 'main'),
+    auth.login
+  );
   saveScan(scan);
   syncProtectRulesFromScans();
   return scan;
 });
 
 app.post('/api/cloud/scans', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  const moduleBlock = assertModuleAccess(auth.account.plan, 'cloud');
+  if (moduleBlock) return planLimitReply(reply, moduleBlock);
+
   const body = req.body as { repo?: string; branch?: string };
   if (!body.repo?.trim()) {
     return reply.status(400).send({ error: 'repo is required (owner/repo or GitHub URL)' });
@@ -538,8 +622,15 @@ app.post('/api/cloud/scans', async (req, reply) => {
 
   try {
     const parsed = parseRepoInput(body.repo);
+    const repoName = `${parsed.owner}/${parsed.repo}`;
+    const allowed = canScanRepo(auth.account, repoName);
+    if (!allowed.ok) return planLimitReply(reply, allowed.reason);
+
     tempDir = await cloneRepo(parsed.owner, parsed.repo, body.branch ?? 'main', token);
-    const scan = await scanCloudDirectory(tempDir, `${parsed.owner}/${parsed.repo}`, body.branch ?? 'main');
+    const scan = tagScan(
+      await scanCloudDirectory(tempDir, repoName, body.branch ?? 'main'),
+      auth.login
+    );
     saveScan(scan);
     syncProtectRulesFromScans();
     return scan;
@@ -554,22 +645,31 @@ app.post('/api/cloud/scans', async (req, reply) => {
 // ── Attack module ──
 
 app.get('/api/attack/scans', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
-  return listScans('attack');
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  return listScans('attack', auth.login);
 });
 
 app.get('/api/attack/scans/:id', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
   const { id } = req.params as { id: string };
   const scan = getScan(id);
   if (!scan || scan.module !== 'attack') {
+    return reply.status(404).send({ error: 'Attack scan not found' });
+  }
+  if (scan.userLogin && scan.userLogin !== auth.login) {
     return reply.status(404).send({ error: 'Attack scan not found' });
   }
   return scan;
 });
 
 app.post('/api/attack/scans', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  const moduleBlock = assertModuleAccess(auth.account.plan, 'attack');
+  if (moduleBlock) return planLimitReply(reply, moduleBlock);
+
   const body = req.body as { target?: string; url?: string; targets?: string[] };
   const multi = body.targets?.length
     ? body.targets
@@ -578,7 +678,7 @@ app.post('/api/attack/scans', async (req, reply) => {
 
   try {
     if (multi?.length) {
-      const scans = await scanAttackTargets(multi);
+      const scans = (await scanAttackTargets(multi)).map((s) => tagScan(s, auth.login));
       for (const scan of scans) saveScan(scan);
       syncProtectRulesFromScans();
       return { scans, count: scans.length };
@@ -586,7 +686,7 @@ app.post('/api/attack/scans', async (req, reply) => {
     if (!single) {
       return reply.status(400).send({ error: 'target, url, or targets[] is required' });
     }
-    const scan = await scanAttackTarget(single);
+    const scan = tagScan(await scanAttackTarget(single), auth.login);
     saveScan(scan);
     syncProtectRulesFromScans();
     return scan;
@@ -594,6 +694,135 @@ app.post('/api/attack/scans', async (req, reply) => {
     const message = err instanceof Error ? err.message : 'Attack probe failed';
     return reply.status(400).send({ error: message });
   }
+});
+
+// ── CI (API key) ──
+
+app.post('/api/ci/scan', async (req, reply) => {
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  if (auth.via !== 'apiKey') {
+    return reply.status(403).send({ error: 'CI scans require an API key (Authorization: Bearer aegis_…)' });
+  }
+
+  const body = req.body as { repo?: string; pr?: number; branch?: string };
+  if (!body.repo?.trim()) {
+    return reply.status(400).send({ error: 'repo is required (owner/repo)' });
+  }
+
+  const token = config.github.token;
+  if (!token) {
+    return reply.status(503).send({ error: 'Server GITHUB_TOKEN not configured for CI scans' });
+  }
+
+  const [owner, repo] = body.repo.split('/');
+  if (!owner || !repo) {
+    return reply.status(400).send({ error: 'repo must be owner/repo' });
+  }
+
+  const repoName = `${owner}/${repo}`;
+  const allowed = canScanRepo(auth.account, repoName);
+  if (!allowed.ok) return planLimitReply(reply, allowed.reason);
+
+  let tempDir: string | undefined;
+  try {
+    if (body.pr) {
+      const pr = await fetchPullRequest(token, owner, repo, body.pr);
+      tempDir = await clonePullRequest(owner, repo, pr.headBranch, token);
+      const scan = tagScan(await scanDirectory(tempDir, repoName, pr.headBranch), auth.login);
+      scan.pullRequest = pr;
+      saveScan(scan);
+      const { commentUrl, statusUrl } = await publishScanToGitHub(token, scan, dashboardUrl(scan.id));
+      updateScanMeta(scan.id, { githubCommentUrl: commentUrl, checkStatusUrl: statusUrl });
+      return { scanId: scan.id, findings: scan.findings.length, score: scan.stats.score, commentUrl };
+    }
+
+    tempDir = await cloneRepo(owner, repo, body.branch ?? 'main', token);
+    const scan = tagScan(await scanDirectory(tempDir, repoName, body.branch ?? 'main'), auth.login);
+    saveScan(scan);
+    return { scanId: scan.id, findings: scan.findings.length, score: scan.stats.score };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'CI scan failed';
+    return reply.status(400).send({ error: message });
+  } finally {
+    if (tempDir) cleanupDir(tempDir);
+  }
+});
+
+// ── Billing & API keys ──
+
+app.get('/api/billing/plan', async (req, reply) => {
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  const account = auth.account;
+  return {
+    ...planSummary(account),
+    stripe: stripeConfigured(),
+    apiKeys: account.apiKeys.map((k) => ({
+      id: k.id,
+      label: k.label,
+      prefix: k.prefix,
+      createdAt: k.createdAt,
+    })),
+  };
+});
+
+app.post('/api/billing/checkout', async (req, reply) => {
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  if (!stripeConfigured()) {
+    return reply.status(503).send({ error: 'Stripe billing is not configured on this server' });
+  }
+  const body = (req.body ?? {}) as { seats?: number };
+  const url = await createCheckoutSession(auth.login, body.seats ?? 1);
+  if (!url) return reply.status(503).send({ error: 'Could not create checkout session' });
+  return { url };
+});
+
+app.post('/api/billing/portal', async (req, reply) => {
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  const url = await createBillingPortalSession(auth.login);
+  if (!url) return reply.status(400).send({ error: 'No billing account — subscribe to Team first' });
+  return { url };
+});
+
+app.post('/api/billing/webhook', async (req, reply) => {
+  const rawBody = (req as { rawBody?: string }).rawBody ?? '';
+  const signature = req.headers['stripe-signature'] as string | undefined;
+  if (!signature) return reply.status(400).send({ error: 'Missing stripe-signature' });
+  try {
+    await handleStripeWebhook(rawBody, signature);
+    return { received: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Webhook error';
+    return reply.status(400).send({ error: message });
+  }
+});
+
+app.post('/api/keys', async (req, reply) => {
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  if (auth.via === 'apiKey') {
+    return reply.status(403).send({ error: 'Create API keys from the dashboard while signed in' });
+  }
+  const body = (req.body ?? {}) as { label?: string };
+  const { key, record } = createApiKey(auth.login, body.label?.trim() || 'CI');
+  return {
+    key,
+    record: { id: record.id, label: record.label, prefix: record.prefix, createdAt: record.createdAt },
+    message: 'Copy this key now — it will not be shown again.',
+  };
+});
+
+app.delete('/api/keys/:id', async (req, reply) => {
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  const { id } = req.params as { id: string };
+  if (!revokeApiKey(auth.login, id)) {
+    return reply.status(404).send({ error: 'API key not found' });
+  }
+  return { ok: true };
 });
 
 app.get('/api/protect/rules/export', async (req, reply) => {

@@ -39,13 +39,24 @@ Open **http://localhost:3847/login** to sign in, or **http://localhost:3847/app*
 3. **Scan a PR** — **+ Scan** → Pull Request tab → `owner/repo#123` or PR URL
 4. **Autofix** — template fixes for secrets/deps; **AI Fix** when `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` is set
 
-### CLI
+### CLI (`npx aegis`)
 
 ```bash
-cd code
-npm run scan:demo              # scan bundled fixture repo
-npm run scan:demo /path/to/repo
+cd code/cli && npm link   # or after publish: npx aegis init
+npx aegis init            # scaffold .aegis/config.yml + GitHub Action
+npx aegis scan .          # local scan (from code/ directory)
 ```
+
+CI scans use an API key from **Settings → Create key** as `AEGIS_API_KEY` in GitHub Secrets.
+
+### Plans
+
+| Plan | Repos | Modules | A-Fix |
+|------|-------|---------|-------|
+| Free | 3 | Code | View only |
+| Team ($29/dev/mo) | Unlimited | All four | Enabled |
+
+Set `STRIPE_*` env vars to enable checkout from Settings.
 
 ### GitHub integration
 

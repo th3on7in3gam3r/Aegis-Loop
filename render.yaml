@@ -27,6 +27,12 @@ services:
         value: /opt/render/project/src/code/data
       - key: CONTACT_EMAIL
         sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_TEAM_PRICE_ID
+        sync: false
     disk:
       name: aegis-data
       mountPath: /opt/render/project/src/code/data

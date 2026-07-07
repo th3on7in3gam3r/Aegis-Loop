@@ -238,9 +238,56 @@ async function api(path, opts = {}) {
     ...opts,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || data.error || 'Request failed');
+  if (!res.ok) {
+    const err = new Error(data.message || data.error || 'Request failed');
+    err.status = res.status;
+    err.code = data.code;
+    err.upgradeUrl = data.upgradeUrl;
+    throw err;
+  }
   return data;
 }
+
+function isTeamPlan() {
+  const p = githubUser?.plan?.plan;
+  return p === 'team' || p === 'enterprise';
+}
+
+function canAutofix() {
+  return Boolean(githubUser?.plan?.autofix);
+}
+
+async function startCheckout() {
+  try {
+    const { url } = await api('/api/billing/checkout', { method: 'POST', body: JSON.stringify({ seats: 1 }) });
+    if (url) window.location.href = url;
+  } catch (e) {
+    if (e.status === 503) {
+      toast('Billing is not configured yet — email hello@aegisloop.dev for Team access');
+      window.open('/#pricing', '_blank');
+      return;
+    }
+    toast(e.message || 'Could not start checkout');
+  }
+}
+
+function updatePlanUi() {
+  const plan = githubUser?.plan;
+  const tier = $('#sidebarPlanTier');
+  const cta = $('#sidebarPlanCta');
+  if (!tier || !cta) return;
+  if (!plan || plan.plan === 'free') {
+    tier.textContent = plan ? `Free · ${plan.reposUsed}/${plan.reposLimit} repos` : 'Free plan';
+    cta.textContent = 'Upgrade to Team →';
+  } else {
+    tier.textContent = `${plan.label} plan`;
+    cta.textContent = 'Manage billing →';
+  }
+}
+
+window.aegisGetUserPlan = () => githubUser?.plan;
+window.aegisIsTeamPlan = isTeamPlan;
+window.aegisStartCheckout = startCheckout;
 
 function sevClass(sev) {
   return sev === 'critical' ? 'sev-critical' : sev === 'warning' ? 'sev-warning' : 'sev-info';
@@ -359,10 +406,12 @@ async function loadAuth() {
   try {
     githubUser = await api('/api/auth/me');
     renderAuth();
+    updatePlanUi();
     if (githubUser.connected) loadRepos();
   } catch {
     githubUser = { connected: false };
     renderAuth();
+    updatePlanUi();
   }
   if (currentView === 'settings') renderSettings();
   renderHomeChecklist();
@@ -1150,8 +1199,16 @@ function renderIntegrations() {
         <h3>Slack &amp; Jira</h3>
         <span class="status-pill soon">Team plan</span>
       </div>
-      <p>Route critical findings to Slack channels and Jira — included on Team and Enterprise.</p>
+      <p>Route critical findings to Slack channels and Jira — on the roadmap for Team and Enterprise.</p>
       <a href="/#pricing" class="btn-outline btn-sm" target="_blank" rel="noopener">View pricing</a>
+    </article>
+    <article class="integration-card">
+      <div class="integration-card-head">
+        <h3>CitePilot</h3>
+        <span class="status-pill on">Sister product</span>
+      </div>
+      <p>GEO platform — track whether ChatGPT, Perplexity, and AI engines cite your product on buyer prompts. Free citation audit.</p>
+      <a href="https://getcitepilot.com" class="btn-outline btn-sm" target="_blank" rel="noopener">Visit getcitepilot.com</a>
     </article>
     <article class="integration-card">
       <div class="integration-card-head">
@@ -1268,6 +1325,8 @@ function renderSettings() {
       </div>`;
   }
 
+  renderBillingSettings();
+
   const scanner = $('#settingsScanner');
   const ai = healthInfo?.ai?.configured;
   const osv = healthInfo?.osv?.enabled !== false;
@@ -1285,6 +1344,92 @@ function renderSettings() {
     </ul>`;
 
   updateThemeLabels();
+}
+
+async function renderBillingSettings() {
+  const el = $('#settingsBilling');
+  if (!el) return;
+  if (!githubUser?.connected) {
+    el.innerHTML = '<p class="settings-hint">Sign in to view your plan.</p>';
+    return;
+  }
+  try {
+    const billing = await api('/api/billing/plan');
+    githubUser.plan = {
+      plan: billing.plan,
+      label: billing.label,
+      reposUsed: billing.reposUsed,
+      reposLimit: billing.reposLimit,
+      autofix: billing.autofix,
+      modules: billing.modules,
+    };
+    updatePlanUi();
+
+    const repoLine = billing.reposLimit
+      ? `${billing.reposUsed} / ${billing.reposLimit} repositories`
+      : `${billing.reposUsed} repositories (unlimited)`;
+    const keysHtml = billing.apiKeys?.length
+      ? billing.apiKeys.map((k) =>
+          `<li><code>${escapeHtml(k.prefix)}…</code> ${escapeHtml(k.label)} <button type="button" class="btn-sm-outline revoke-key-btn" data-id="${escapeHtml(k.id)}">Revoke</button></li>`
+        ).join('')
+      : '<li class="settings-hint">No API keys yet — create one for GitHub Actions</li>';
+
+    el.innerHTML = `
+      <div class="settings-row" style="margin-bottom:14px">
+        <div>
+          <strong>${escapeHtml(billing.label)} plan</strong>
+          <span class="settings-hint">${repoLine} · A-Fix ${billing.autofix ? 'enabled' : 'Team only'}</span>
+        </div>
+        ${billing.plan === 'free'
+          ? '<button type="button" class="btn-primary btn-sm" id="settingsUpgradeBtn">Upgrade to Team</button>'
+          : '<button type="button" class="btn-outline btn-sm" id="settingsPortalBtn">Manage billing</button>'}
+      </div>
+      <h4 style="font-size:13px;margin:0 0 8px">CLI setup</h4>
+      <p class="settings-hint" style="margin-bottom:8px">Run <code>npx aegis init</code> in your repo, then add an API key below as <code>AEGIS_API_KEY</code> in GitHub Secrets.</p>
+      <div class="settings-row" style="margin-bottom:14px">
+        <div><strong>API keys</strong><span class="settings-hint">For CI / GitHub Actions</span></div>
+        <button type="button" class="btn-outline btn-sm" id="settingsCreateKeyBtn">Create key</button>
+      </div>
+      <ul class="settings-list">${keysHtml}</ul>
+      <p class="settings-hint" id="settingsNewKey" style="margin-top:10px"></p>`;
+
+    $('#settingsUpgradeBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      startCheckout();
+    });
+    $('#settingsPortalBtn')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const { url } = await api('/api/billing/portal', { method: 'POST' });
+        if (url) window.location.href = url;
+      } catch (err) {
+        toast(err.message || 'Could not open billing portal');
+      }
+    });
+    $('#settingsCreateKeyBtn')?.addEventListener('click', async () => {
+      try {
+        const res = await api('/api/keys', { method: 'POST', body: JSON.stringify({ label: 'GitHub Actions' }) });
+        $('#settingsNewKey').innerHTML = `New key (copy now): <code style="word-break:break-all">${escapeHtml(res.key)}</code>`;
+        toast('API key created');
+        renderBillingSettings();
+      } catch (err) {
+        toast(err.message || 'Could not create key');
+      }
+    });
+    el.querySelectorAll('.revoke-key-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          await api(`/api/keys/${btn.dataset.id}`, { method: 'DELETE' });
+          toast('API key revoked');
+          renderBillingSettings();
+        } catch (err) {
+          toast(err.message || 'Could not revoke key');
+        }
+      });
+    });
+  } catch (e) {
+    el.innerHTML = `<p class="settings-hint">${escapeHtml(e.message || 'Could not load billing')}</p>`;
+  }
 }
 
 function renderDocs(activeId) {
@@ -1454,6 +1599,8 @@ function renderFindingsTable(findings, opts = {}) {
     let statusCell;
     if (f.fixed) {
       statusCell = `<span class="status-fixed">Fixed</span>`;
+    } else if (mod === 'code' && (f.autofix || llmAvailable) && !canAutofix()) {
+      statusCell = `<button type="button" class="status-todo upgrade-fix-btn" title="A-Fix requires Team plan">Upgrade</button>`;
     } else if (mod === 'code' && f.autofix) {
       statusCell = `<button type="button" class="status-autofix autofix-btn" data-id="${f.id}" data-scan="${scanId}">A-Fix</button>`;
     } else if (mod === 'code' && llmAvailable) {
@@ -1486,6 +1633,14 @@ function renderFindingsTable(findings, opts = {}) {
       e.preventDefault();
       e.stopPropagation();
       openAutofixPanel(btn.dataset.id, btn.dataset.scan);
+    });
+  });
+
+  tbody.querySelectorAll('.upgrade-fix-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      startCheckout();
     });
   });
 
@@ -1650,6 +1805,10 @@ function populateAutofixPanel(finding, autofix, aiGenerated) {
 }
 
 async function openAutofixPanel(findingId, scanId) {
+  if (!canAutofix()) {
+    toast('A-Fix requires a Team plan — upgrade in Settings');
+    return;
+  }
   if (scanId && currentScan?.id !== scanId) {
     try {
       currentScan = await api(`/api/scans/${scanId}`);
@@ -2066,6 +2225,16 @@ $('#navFeed').addEventListener('click', (e) => {
   showFeedView();
 });
 
+$('#sidebarUpgradeBtn')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  if (isTeamPlan()) {
+    showSettingsView();
+    renderBillingSettings();
+    return;
+  }
+  startCheckout();
+});
+
 $('#overviewGuideHeaderBtn')?.addEventListener('click', () => {
   showFeedView();
   window.AegisModules?.revealGuide?.('overview');
@@ -2164,6 +2333,14 @@ loadAuth().then(async () => {
   }
   if (params.get('auth') === 'failed') {
     toast('GitHub connection failed');
+    history.replaceState(null, '', '/app/');
+  }
+  if (params.get('billing') === 'success') {
+    toast('Team plan active — A-Fix and all modules unlocked');
+    history.replaceState(null, '', '/app/');
+    await loadAuth();
+  }
+  if (params.get('billing') === 'cancel') {
     history.replaceState(null, '', '/app/');
   }
   const view = params.get('view');

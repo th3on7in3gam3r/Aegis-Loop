@@ -4,21 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aegis Loop — Find it. Fix it. Ship it.</title>
-<meta name="description" content="Aegis Loop automatically finds and fixes vulnerabilities across code, cloud, and runtime — security that fits into your workflow, not on top of it.">
+<meta name="description" content="Aegis Loop scans GitHub repos and pull requests for secrets, injection flaws, and vulnerable dependencies — with cloud IaC, URL probes, and WAF rule export on Team.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="__APP_BASE__/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Aegis Loop">
 <meta property="og:url" content="__APP_BASE__/">
 <meta property="og:title" content="Aegis Loop — Find it. Fix it. Ship it.">
-<meta property="og:description" content="Automatically find and fix vulnerabilities across code, cloud, and runtime.">
+<meta property="og:description" content="GitHub-native security scanning with autofix PRs, cloud IaC checks, URL probes, and WAF rule export.">
 <meta property="og:image" content="/assets/og-image.png">
 <meta property="og:image:alt" content="Aegis Loop — developer security platform">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Aegis Loop — Find it. Fix it. Ship it.">
-<meta name="twitter:description" content="Automatically find and fix vulnerabilities across code, cloud, and runtime.">
+<meta name="twitter:description" content="GitHub-native security scanning with autofix PRs, cloud IaC checks, URL probes, and WAF rule export.">
 <meta name="twitter:image" content="/assets/og-image.png">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <link rel="apple-touch-icon" href="/assets/favicon.png">
@@ -686,6 +686,38 @@
   }
   .resource-card:hover .resource-card-link { text-decoration: underline; }
 
+  /* ── Partner promo ── */
+  .partner-promo { padding: 72px 0; }
+  .partner-card {
+    display: flex; align-items: center; justify-content: space-between; gap: 32px; flex-wrap: wrap;
+    background: linear-gradient(135deg, rgba(14,165,233,0.07) 0%, var(--bg-elevated) 42%, rgba(124,58,237,0.06) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 18px;
+    padding: 36px 40px;
+    box-shadow: 0 12px 40px -20px rgba(15,20,40,0.1);
+  }
+  @media (max-width: 720px) {
+    .partner-card { padding: 28px 24px; }
+    .partner-card-actions { width: 100%; }
+    .partner-card-actions .btn { width: 100%; justify-content: center; }
+  }
+  .partner-eyebrow {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #0369a1; margin-bottom: 10px; display: block;
+  }
+  .partner-card h2 {
+    font-size: clamp(1.35rem, 2.5vw, 1.75rem); font-weight: 700;
+    letter-spacing: -0.02em; margin-bottom: 12px; line-height: 1.2;
+  }
+  .partner-card p { font-size: 15px; color: var(--text-secondary); line-height: 1.65; max-width: 54ch; }
+  .partner-card p strong { color: var(--text-primary); font-weight: 600; }
+  .partner-card-actions {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 10px; flex-shrink: 0;
+  }
+  .partner-note { font-size: 12px; color: var(--text-muted); }
+  .partner-inline-link { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+  .partner-inline-link:hover { color: var(--violet-bright); }
+
   /* ── Contact ── */
   .contact { padding: 100px 0; }
   .contact-grid {
@@ -931,25 +963,25 @@
       <div class="hero-content">
         <div class="hero-badge reveal">
           <span class="pulse-dot"></span>
-          4,600+ repos scanning now
+          Early access · built for GitHub teams
         </div>
         <h1>
           <span class="line"><span class="word">Find it.</span></span>
           <span class="line"><span class="word">Fix it.</span></span>
           <span class="line"><span class="word gradient-text">Ship it.</span></span>
         </h1>
-        <p class="hero-sub reveal reveal-d1">Aegis Loop automatically finds and fixes vulnerabilities across your code, cloud, and runtime — built into the workflow you already run. No new dashboards. No security theater.</p>
+        <p class="hero-sub reveal reveal-d1">Aegis Loop scans your code, cloud configs, and authorized URLs — then helps you fix what matters in pull requests. Free tier covers Code scanning; Team unlocks autofix PRs, all modules, and CI keys.</p>
         <div class="hero-ctas reveal reveal-d2">
           <a href="/login" class="btn btn-primary btn-lg">Start for Free <span class="btn-arrow">→</span></a>
           <a href="#contact" class="btn btn-ghost btn-lg">Book a Demo</a>
         </div>
         <div class="hero-proof reveal reveal-d3">
-          <div class="terminal-chip">
+          <div class="terminal-chip" title="CLI in code/cli on GitHub — npm publish coming soon">
             <span class="prompt">$</span>
             <span class="cmd">npx aegis init</span>
             <span class="cursor"></span>
           </div>
-          <span>Live in under 2 minutes</span>
+          <span>Scaffold CI with the repo CLI</span>
         </div>
       </div>
 
@@ -982,7 +1014,7 @@
               </div>
               <div class="dash-nav-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg>
-                Runtime
+                Protect
               </div>
             </aside>
             <div class="dash-main">
@@ -1004,7 +1036,7 @@
                   <span class="sev sev-crit">CRIT</span>
                   <div>
                     <div class="finding-title">Hardcoded AWS key in api/auth.ts:28</div>
-                    <div class="finding-meta">exposed · reachable from /api/v2</div>
+                    <div class="finding-meta">secret · Aegis Loop/code</div>
                   </div>
                 </div>
                 <span class="finding-action">Autofix PR →</span>
@@ -1023,8 +1055,8 @@
                 <div class="finding-left">
                   <span class="sev sev-ok">OK</span>
                   <div>
-                    <div class="finding-title">Runtime WAF blocking SQLi attempts</div>
-                    <div class="finding-meta">14 blocked in last hour</div>
+                    <div class="finding-title">Protect blocked SQLi probe</div>
+                    <div class="finding-meta">WAF rule · demo on this dashboard</div>
                   </div>
                 </div>
                 <span class="finding-action">View →</span>
@@ -1042,7 +1074,7 @@
       <div class="section-head reveal">
         <span class="section-label">Modules</span>
         <h2 class="section-title">Four modules. One closed loop.</h2>
-        <p class="section-desc">Aegis Loop watches your software from every angle it can actually be attacked from — then fixes what it finds, automatically.</p>
+        <p class="section-desc">Four modules share one dashboard — scan repos and PRs, check IaC files, probe URLs you authorize, and export WAF rules from what you find.</p>
       </div>
       <div class="module-grid">
         <article class="module-card reveal">
@@ -1066,8 +1098,8 @@
         <article class="module-card reveal reveal-d3">
           <span class="module-tag">Aegis Loop / protect</span>
           <div class="module-icon"><svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg></div>
-          <h3>Runtime firewall</h3>
-          <p>Blocks the attacks that get past everything else — in production, with zero measurable latency.</p>
+          <h3>WAF rule lab</h3>
+          <p>Sync rules from Code, Cloud, and Attack findings. Test blocks on this dashboard, then export JSON for Cloudflare, AWS WAF, or nginx.</p>
         </article>
       </div>
     </div>
@@ -1079,12 +1111,12 @@
       <div class="section-head reveal">
         <span class="section-label">Inside the platform</span>
         <h2 class="section-title">Every finding, in the order that matters.</h2>
-        <p class="section-desc">No 400-item backlog. Aegis Loop ranks issues by real exploitability so your team fixes the two things that matter — not the two hundred that don't.</p>
+        <p class="section-desc">Findings sorted by severity with template or AI fixes on Team — surfaced in PR comments and checks, not a separate backlog.</p>
       </div>
       <div class="preview-wrap reveal">
-        <div class="callout callout-1"><span class="callout-dot"></span> Ranked by exploitability</div>
-        <div class="callout callout-2"><span class="callout-dot"></span> One-click autofix PR</div>
-        <div class="callout callout-3"><span class="callout-dot"></span> Runs on every push</div>
+        <div class="callout callout-1"><span class="callout-dot"></span> Sorted by severity</div>
+        <div class="callout callout-2"><span class="callout-dot"></span> Autofix PRs on Team</div>
+        <div class="callout callout-3"><span class="callout-dot"></span> GitHub Action on PRs</div>
         <div class="preview-frame">
           <div class="dashboard">
             <div class="dash-bar">
@@ -1098,7 +1130,7 @@
                 <div class="dash-nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg> Code <span class="dash-nav-badge">3</span></div>
                 <div class="dash-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg> Cloud</div>
                 <div class="dash-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg> Attack Surface</div>
-                <div class="dash-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg> Runtime</div>
+                <div class="dash-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg> Protect</div>
                 <div class="dash-sidebar-label" style="margin-top:16px">Settings</div>
                 <div class="dash-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg> Integrations</div>
               </aside>
@@ -1114,7 +1146,7 @@
                     <span class="sev sev-crit">CRIT</span>
                     <div>
                       <div class="finding-title">SQL injection in queries/search.ts:44</div>
-                      <div class="finding-meta">reachable from public endpoint · CVSS 9.1</div>
+                      <div class="finding-meta">injection · template autofix available</div>
                     </div>
                   </div>
                   <span class="finding-action">Generate fix →</span>
@@ -1124,7 +1156,7 @@
                     <span class="sev sev-warn">WARN</span>
                     <div>
                       <div class="finding-title">Missing rate limit on /api/login</div>
-                      <div class="finding-meta">brute-force exposure · Aegis Loop/attack confirmed</div>
+                      <div class="finding-meta">attack surface · manual fix guide</div>
                     </div>
                   </div>
                   <span class="finding-action">Generate fix →</span>
@@ -1167,11 +1199,11 @@
       </div>
       <div class="feature-grid reveal">
         <div class="feature-cell"><div class="feature-num">01</div><h3>Lives in your pull requests</h3><p>Findings show up as comments and suggested fixes — not a separate portal to remember to check.</p></div>
-        <div class="feature-cell"><div class="feature-num">02</div><h3>Reachability-aware</h3><p>We tell you which vulnerabilities are actually exploitable in your codebase — not just present in a manifest.</p></div>
-        <div class="feature-cell"><div class="feature-num">03</div><h3>Autofix, not just alerts</h3><p>Most findings ship with a ready-to-merge pull request. Review it, merge it, move on.</p></div>
-        <div class="feature-cell"><div class="feature-num">04</div><h3>One loop, four layers</h3><p>Code, cloud, attack surface, and runtime — correlated so you see the full chain of a real breach.</p></div>
+        <div class="feature-cell"><div class="feature-num">02</div><h3>Severity-first triage</h3><p>Critical, high, and info findings in one list — sorted so you start with what breaks production, not noise from manifests alone.</p></div>
+        <div class="feature-cell"><div class="feature-num">03</div><h3>Autofix PRs on Team</h3><p>Template patches for secrets, SQLi, and dependencies — plus optional AI fixes when your server has an LLM key configured.</p></div>
+        <div class="feature-cell"><div class="feature-num">04</div><h3>Four modules, one dashboard</h3><p>Code, cloud IaC, authorized URL probes, and WAF rule export — without switching between four different tools.</p></div>
         <div class="feature-cell"><div class="feature-num">05</div><h3>Nothing to babysit</h3><p>API-based scanning means nothing to install on production hosts. Nothing new to patch.</p></div>
-        <div class="feature-cell"><div class="feature-num">06</div><h3>Compliance without theater</h3><p>SOC 2 and ISO 27001 controls mapped automatically as you build — not reconstructed at audit time.</p></div>
+        <div class="feature-cell"><div class="feature-num">06</div><h3>PR comments &amp; checks</h3><p>Scan results post as GitHub PR comments and <code>aegis-loop/code</code> commit checks — the workflow your team already reviews.</p></div>
       </div>
     </div>
   </section>
@@ -1179,17 +1211,28 @@
   <!-- TRUST -->
   <section class="trust divider">
     <div class="container">
-      <p class="trust-label reveal">Trusted by engineering teams shipping daily</p>
-      <div class="marquee-wrap reveal">
-        <div class="marquee" aria-hidden="true">
-          <span>Northwind</span><span>Fieldstone</span><span>Hollowpoint</span><span>Kestrel</span><span>Basalt Labs</span><span>Meridian</span><span>Ironclad</span><span>Vertex</span>
-          <span>Northwind</span><span>Fieldstone</span><span>Hollowpoint</span><span>Kestrel</span><span>Basalt Labs</span><span>Meridian</span><span>Ironclad</span><span>Vertex</span>
-        </div>
-      </div>
+      <p class="trust-label reveal">What ships in the product today</p>
       <div class="trust-stats">
-        <div class="trust-stat reveal"><div class="val"><span data-count="11">0</span><em>min</em></div><div class="lbl">avg. time to first fix</div></div>
-        <div class="trust-stat reveal reveal-d1"><div class="val"><span data-count="92">0</span><em>%</em></div><div class="lbl">alert noise reduced</div></div>
-        <div class="trust-stat reveal reveal-d2"><div class="val"><span data-count="4600">0</span><em>+</em></div><div class="lbl">repos scanning right now</div></div>
+        <div class="trust-stat reveal"><div class="val">4</div><div class="lbl">modules in one dashboard</div></div>
+        <div class="trust-stat reveal reveal-d1"><div class="val">GitHub</div><div class="lbl">OAuth, PR scans, checks &amp; comments</div></div>
+        <div class="trust-stat reveal reveal-d2"><div class="val">CLI</div><div class="lbl"><code style="font-family:var(--font-mono);font-size:0.85em">aegis init</code> + local scan</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CITEPILOT -->
+  <section class="partner-promo divider" id="citepilot">
+    <div class="container reveal">
+      <div class="partner-card">
+        <div class="partner-card-body">
+          <span class="partner-eyebrow">Sister product</span>
+          <h2>Ship secure code — get cited in AI answers</h2>
+          <p><strong>Aegis Loop</strong> finds and fixes vulnerabilities in your repos. <strong><a href="https://getcitepilot.com" class="partner-inline-link" target="_blank" rel="noopener">CitePilot</a></strong> tracks whether ChatGPT, Perplexity, and other AI engines cite your product on buyer prompts — with a free citation audit and weekly GEO action plans.</p>
+        </div>
+        <div class="partner-card-actions">
+          <a href="https://getcitepilot.com" class="btn btn-primary" target="_blank" rel="noopener">Try CitePilot free <span class="btn-arrow">→</span></a>
+          <span class="partner-note">Generative Engine Optimization · getcitepilot.com</span>
+        </div>
       </div>
     </div>
   </section>
@@ -1200,7 +1243,7 @@
       <div class="section-head reveal">
         <span class="section-label">Pricing</span>
         <h2 class="section-title">Start free. Scale when you're ready.</h2>
-        <p class="section-desc">Every plan includes all four Aegis Loop modules — no feature paywalls, just limits that grow with you.</p>
+        <p class="section-desc">Free covers Code scanning for up to 3 repos. Team unlocks autofix PRs, all modules, and CI API keys.</p>
       </div>
       <div class="pricing-grid">
         <div class="price-card reveal">
@@ -1210,6 +1253,7 @@
           <ul class="price-features">
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Up to 3 repositories</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Aegis Loop/code + dependency scanning</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> View findings &amp; fix guides (A-Fix on Team)</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Community support</li>
           </ul>
           <a href="/login" class="btn btn-ghost">Start for Free</a>
@@ -1223,7 +1267,7 @@
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Unlimited repositories</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> All four Aegis Loop modules</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Autofix pull requests</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Slack &amp; Jira integrations</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> GitHub Action CI scans &amp; API keys</li>
           </ul>
           <a href="/login" class="btn btn-primary">Start for Free</a>
         </div>
@@ -1232,8 +1276,8 @@
           <div class="price-tagline">For large or regulated orgs</div>
           <div class="price-amount">Custom</div>
           <ul class="price-features">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> SSO &amp; audit logging</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Guaranteed response times</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> SSO &amp; audit logging (roadmap)</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Slack &amp; Jira routing (roadmap)</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Dedicated onboarding</li>
           </ul>
           <a href="#contact" class="btn btn-ghost">Book a Demo</a>
@@ -1252,8 +1296,8 @@
       </div>
       <div class="about-grid">
         <div class="about-story reveal">
-          <p>Most security tools dump thousands of alerts into a dashboard and call it a day. We built Aegis Loop around a different idea: find what's actually exploitable, fix it where you already work, and close the loop from code to cloud to runtime.</p>
-          <p>Today, teams use Aegis Loop to scan pull requests, patch vulnerable dependencies, and ship autofix commits — without adding another portal to their day. All four modules — Code, Cloud, Attack, and Protect — are live in the dashboard today, with deeper cloud API inventory and enterprise features still expanding.</p>
+          <p>Most security tools dump thousands of alerts into a dashboard and call it a day. We built Aegis Loop around a different idea: scan where you already work — pull requests — and fix what you can with template or AI patches on Team.</p>
+          <p>The dashboard ships four modules today: Code (SAST + OSV), Cloud (Terraform/K8s/Docker in repos), Attack (authorized URL probes), and Protect (WAF rule sync, demo blocking, and JSON export). Deeper cloud API inventory, Slack/Jira routing, and enterprise SSO are on the roadmap.</p>
           <div class="about-metrics">
             <div class="about-metric"><strong>2024</strong><span>Founded</span></div>
             <div class="about-metric"><strong>Remote</strong><span>Global team</span></div>
@@ -1263,7 +1307,7 @@
         <div class="about-values reveal reveal-d1">
           <div class="about-value">
             <h3>Fix, don't flood</h3>
-            <p>Rankings based on reachability and real exploit paths — not CVE counts for their own sake.</p>
+            <p>Severity-sorted findings with template autofix and optional AI patches — not CVE counts for their own sake.</p>
           </div>
           <div class="about-value">
             <h3>Meet developers where they are</h3>
@@ -1271,7 +1315,7 @@
           </div>
           <div class="about-value">
             <h3>One loop, full coverage</h3>
-            <p>Code, cloud, attack surface, and runtime — correlated so you see how a flaw becomes an incident.</p>
+            <p>Code, cloud IaC, URL probes, and WAF rules — in one dashboard, with export paths for production edge WAFs.</p>
           </div>
         </div>
       </div>
@@ -1293,8 +1337,14 @@
           <p>Quick start, scanning workflows, A-Fix, GitHub integration, and API reference inside the dashboard.</p>
           <span class="resource-card-link">Sign in to open docs →</span>
         </a>
-        <a href="https://github.com/th3on7in3gam3r/Aegis-Loop#readme" class="resource-card" target="_blank" rel="noopener">
+        <a href="https://github.com/th3on7in3gam3r/Aegis-Loop/tree/main/code/cli" class="resource-card" target="_blank" rel="noopener">
           <span class="resource-card-label">Setup</span>
+          <h3>CLI — <code>aegis init</code></h3>
+          <p>Scaffold <code>.aegis/config.yml</code> and a GitHub Action workflow. Run from <code>code/cli</code> until the package is on npm.</p>
+          <span class="resource-card-link">View CLI on GitHub →</span>
+        </a>
+        <a href="https://github.com/th3on7in3gam3r/Aegis-Loop#readme" class="resource-card" target="_blank" rel="noopener">
+          <span class="resource-card-label">Source</span>
           <h3>GitHub README</h3>
           <p>Clone locally, configure OAuth and webhooks, environment variables, and the full API summary.</p>
           <span class="resource-card-link">View on GitHub →</span>
@@ -1304,6 +1354,12 @@
           <h3>FAQ</h3>
           <p>What we scan for, GitHub setup, LLM autofix, and how Aegis Loop compares to traditional SAST.</p>
           <span class="resource-card-link">Read FAQ →</span>
+        </a>
+        <a href="https://getcitepilot.com" class="resource-card" target="_blank" rel="noopener">
+          <span class="resource-card-label">Sister product</span>
+          <h3>CitePilot — AI citation tracking</h3>
+          <p>Monitor money prompts across ChatGPT, Perplexity, and Google AI. Free citation audit — complements shipping secure software with being found in AI answers.</p>
+          <span class="resource-card-link">Visit getcitepilot.com →</span>
         </a>
         <a href="/llms.txt" class="resource-card">
           <span class="resource-card-label">Reference</span>
@@ -1334,15 +1390,23 @@
         </details>
         <details class="faq-item">
           <summary>Do I need an LLM API key?</summary>
-          <p>No for core scanning and template autofixes (secrets, SQL injection, dependency bumps). Set ANTHROPIC_API_KEY or OPENAI_API_KEY only when you want AI-generated fixes for complex findings.</p>
+          <p>No for core scanning. Template autofixes (secrets, SQLi, dependency bumps) require Team. Set ANTHROPIC_API_KEY or OPENAI_API_KEY on the server only when you want AI-generated fixes for complex findings.</p>
         </details>
         <details class="faq-item">
           <summary>Is Aegis Loop free to try?</summary>
-          <p>Yes. Run a demo scan without GitHub from the dashboard, or connect a repo and scan pull requests for free.</p>
+          <p>Yes. The Free plan covers up to 3 repositories with Code scanning and dependency checks. Connect GitHub, run a demo scan, or scan pull requests without a credit card. Autofix PRs and Cloud/Attack/Protect modules require Team.</p>
+        </details>
+        <details class="faq-item">
+          <summary>How do I set up CI with <code>npx aegis init</code>?</summary>
+          <p>Run <code>aegis init</code> from the CLI in <code>code/cli</code> (or after we publish to npm). It writes <code>.aegis/config.yml</code> and a GitHub Action workflow. Create an API key in Settings and add it as <code>AEGIS_API_KEY</code> in GitHub Secrets.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What does Protect actually do?</summary>
+          <p>Protect syncs WAF rules from your findings, runs live pattern blocking on this dashboard server so you can test rules, and exports JSON you can implement in Cloudflare WAF, AWS WAF, or nginx. It is not a managed edge WAF for your production traffic yet.</p>
         </details>
         <details class="faq-item">
           <summary>How is Aegis Loop different from traditional SAST?</summary>
-          <p>Findings land in PRs and checks you already use, with one-click autofix instead of ticket-only workflows. Code, cloud, attack surface, and runtime modules share one closed security loop.</p>
+          <p>Findings land in PRs and checks you already use, with autofix PRs on Team instead of ticket-only workflows. Code, cloud IaC, URL probes, and WAF rule export share one dashboard.</p>
         </details>
       </div>
     </div>
@@ -1412,8 +1476,8 @@
           </div>
           <div class="contact-success" id="contactSuccess">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
-            <h4>Message received</h4>
-            <p>Thanks for reaching out — we'll get back to you within one business day.</p>
+            <h4>Message ready to send</h4>
+            <p>Your email app should open with this message. If it doesn't, write to hello@aegisloop.dev directly.</p>
           </div>
         </div>
       </div>
@@ -1447,7 +1511,7 @@
           </span>
           <span class="logo-text">Aegis <span>Loop</span></span>
         </a>
-        <p class="footer-tagline">Developer security that ships with your pull requests — find vulnerabilities, autofix in one click.</p>
+        <p class="footer-tagline">GitHub-native security scanning — find vulnerabilities in PRs, autofix on Team, export WAF rules from findings.</p>
         <a href="/login" class="footer-cta">Start for free →</a>
       </div>
       <div class="footer-col">
@@ -1464,6 +1528,7 @@
         <ul>
           <li><a href="#about">About</a></li>
           <li><a href="#contact">Contact</a></li>
+          <li><a href="https://getcitepilot.com" target="_blank" rel="noopener">CitePilot (GEO)</a></li>
           <li><a href="mailto:hello@aegisloop.dev" class="js-contact-email">hello@aegisloop.dev</a></li>
           <li><a href="mailto:sales@aegisloop.dev" class="js-contact-email">sales@aegisloop.dev</a></li>
         </ul>
@@ -1482,6 +1547,7 @@
           <li><a href="/login">Dashboard</a></li>
           <li><a href="https://github.com/th3on7in3gam3r/Aegis-Loop#readme" target="_blank" rel="noopener">GitHub</a></li>
           <li><a href="/llms.txt">llms.txt</a></li>
+          <li><a href="https://getcitepilot.com" target="_blank" rel="noopener">CitePilot</a></li>
           <li><a href="#resources">Resources</a></li>
         </ul>
       </div>
@@ -1567,14 +1633,24 @@
   }, { threshold: 0.5 });
   counters.forEach(el => countIO.observe(el));
 
-  // Contact form
+  // Contact form — opens mail client (no backend inbox yet)
   const contactForm = document.getElementById('contactForm');
   const contactFormPanel = document.getElementById('contactFormPanel');
   const contactSuccess = document.getElementById('contactSuccess');
+  let contactEmail = 'hello@aegisloop.dev';
   if (contactForm) {
     contactForm.addEventListener('submit', (e) => {
       e.preventDefault();
+      const fd = new FormData(contactForm);
+      const topic = fd.get('topic') || 'other';
+      const subject = encodeURIComponent(`Aegis Loop: ${topic}`);
+      const body = encodeURIComponent(
+        `Name: ${fd.get('name')}\nEmail: ${fd.get('email')}\nTopic: ${topic}\n\n${fd.get('message')}`
+      );
+      window.location.href = `mailto:${contactEmail}?subject=${subject}&body=${body}`;
       contactFormPanel.style.display = 'none';
+      contactSuccess.querySelector('p').textContent =
+        "Your email app should open with this message — if it doesn't, write to " + contactEmail + '.';
       contactSuccess.classList.add('visible');
     });
   }
@@ -1595,6 +1671,7 @@
     .then((health) => {
       const email = health.contactEmail;
       if (!email) return;
+      contactEmail = email;
       document.querySelectorAll('.js-contact-email').forEach((el) => {
         el.href = `mailto:${email}`;
         el.textContent = email;

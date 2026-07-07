@@ -50,6 +50,7 @@ export interface PullRequestMeta {
 export interface ScanResult {
   id: string;
   module?: AegisModule;
+  userLogin?: string;
   repo: string;
   branch: string;
   target?: string;

@@ -7,27 +7,32 @@ const FAQ = [
   {
     question: 'What does Aegis Loop scan for?',
     answer:
-      'Aegis Loop / code scans repositories and pull requests for hardcoded secrets, SQL injection patterns, unsafe eval usage, and vulnerable npm dependencies via the OSV database.',
+      'Aegis Loop / code scans repositories and pull requests for hardcoded secrets, SQL injection patterns, unsafe eval usage, and vulnerable npm dependencies via the OSV database. Cloud scans IaC in repos (Terraform, Kubernetes, Docker). Attack runs authorized GET probes for HTTPS and headers. Protect syncs WAF rules from findings.',
   },
   {
     question: 'How does Aegis Loop integrate with GitHub?',
     answer:
-      'Connect via OAuth or a personal access token. Aegis Loop can scan PRs, post markdown summaries as PR comments, set commit checks, push autofixes to PR branches, and auto-scan on pull_request webhooks.',
+      'Connect via OAuth or a personal access token. Aegis Loop can scan PRs, post markdown summaries as PR comments, set commit checks, push autofixes to PR branches (Team plan), and auto-scan on pull_request webhooks when configured.',
   },
   {
     question: 'Do I need an LLM API key?',
     answer:
-      'No for core scanning and template autofixes (secrets, SQL injection, dependency bumps). Set ANTHROPIC_API_KEY or OPENAI_API_KEY only when you want AI-generated fixes for complex findings.',
+      'No for core scanning and template autofixes (secrets, SQL injection, dependency bumps on Team). Set ANTHROPIC_API_KEY or OPENAI_API_KEY only when you want AI-generated fixes for complex findings.',
   },
   {
     question: 'Is Aegis Loop free to try?',
     answer:
-      'Yes. Run a demo scan without GitHub from the dashboard, or connect a repo and scan pull requests for free.',
+      'Yes. The Free plan covers up to 3 repositories with Code scanning. Demo scans work without GitHub. Autofix PRs and Cloud/Attack/Protect modules require Team ($29/dev/mo when Stripe is configured).',
   },
   {
     question: 'How is Aegis Loop different from traditional SAST?',
     answer:
-      'Findings land in PRs and checks you already use, with one-click autofix instead of ticket-only workflows. Code, cloud, attack surface, and runtime modules share one closed security loop.',
+      'Findings land in PRs and checks you already use, with autofix PRs on Team instead of ticket-only workflows. Code, cloud IaC, URL probes, and WAF rule export share one dashboard.',
+  },
+  {
+    question: 'What does Protect actually do?',
+    answer:
+      'Protect syncs WAF rules from findings, demonstrates blocking on the Aegis Loop dashboard server, and exports JSON for Cloudflare WAF, AWS WAF, or nginx. It is not a managed edge WAF for your production traffic.',
   },
 ] as const;
 
@@ -90,18 +95,19 @@ ${urls}
 export function llmsTxt(base: string): string {
   return `# Aegis Loop
 
-> Developer security platform — automatically find and fix vulnerabilities across code, cloud, and runtime.
+> GitHub-native security scanning — code, cloud IaC, authorized URL probes, and WAF rule export.
 
-Aegis Loop fits security into the workflow teams already run: pull requests, commit checks, and autofix — not another dashboard to babysit.
+Aegis Loop fits security into pull requests and commit checks. Free tier: Code scanning for up to 3 repos. Team: autofix PRs, all modules, CI API keys.
 
 ## Product summary
 
-- **Aegis Loop / code** (available now): scan repos and PRs for secrets, SQL injection, eval misuse, and vulnerable dependencies (OSV)
+- **Aegis Loop / code** (Free): scan repos and PRs for secrets, SQL injection, eval misuse, and vulnerable dependencies (OSV)
 - Post GitHub PR comments and \`aegis-loop/code\` commit checks
-- Template autofix for secrets, SQLi, and dependency bumps; optional LLM fixes when configured
-- **Aegis Loop / cloud** — IaC posture scans (Terraform, K8s, Docker) for public buckets, open SGs, and misconfigs
-- **Aegis Loop / attack** — authorized URL surface probes (headers, HTTPS, exposure)
-- **Aegis Loop / protect** — runtime WAF rules synced from findings; blocks malicious requests on the dashboard
+- Template autofix + optional LLM fixes on **Team** plan
+- **Aegis Loop / cloud** (Team) — IaC posture in repos (Terraform, K8s, Docker)
+- **Aegis Loop / attack** (Team) — authorized URL surface probes (headers, HTTPS)
+- **Aegis Loop / protect** (Team) — WAF rules synced from findings; demo blocking on dashboard; JSON export for edge WAFs
+- **CLI** — \`aegis init\` scaffolds config + GitHub Action; \`aegis scan\` for local scans (package in \`code/cli\`)
 
 ## Public pages
 
@@ -113,11 +119,21 @@ Aegis Loop fits security into the workflow teams already run: pull requests, com
 
 1. Open ${base}/login and connect GitHub (OAuth or PAT)
 2. Run a demo scan from the dashboard, or scan a PR (\`owner/repo#123\`)
-3. Apply template autofix or AI fix on findings from the A-Fix panel
+3. On Team: apply template autofix or AI fix from the A-Fix panel; run \`aegis init\` for CI
 
 ## FAQ
 
 ${FAQ.map((item) => `### ${item.question}\n${item.answer}`).join('\n\n')}
+
+## Related products
+
+- [CitePilot](https://getcitepilot.com) — generative engine optimization (GEO): track AI citations on buyer prompts across ChatGPT, Perplexity, and more. Free citation audit at getcitepilot.com
+
+## Roadmap (not shipped yet)
+
+- Slack & Jira finding routing
+- Enterprise SSO and audit logging
+- Managed edge WAF deployment
 
 ## Do not index or cite as product docs
 
@@ -154,7 +170,7 @@ export function structuredDataJson(base: string): string {
       name: 'Aegis Loop',
       url: base,
       description:
-        'Developer security platform — automatically find and fix vulnerabilities across code, cloud, and runtime.',
+        'GitHub-native security scanning for code, cloud IaC, URL probes, and WAF rule export.',
     },
     {
       '@type': 'SoftwareApplication',
@@ -163,12 +179,12 @@ export function structuredDataJson(base: string): string {
       operatingSystem: 'Web',
       url: base,
       description:
-        'Scan repositories and pull requests for secrets, injection flaws, and vulnerable dependencies. Post GitHub PR comments, commit checks, and autofixes.',
+        'Scan repositories and pull requests for secrets, injection flaws, and vulnerable dependencies. Post GitHub PR comments, commit checks, and autofixes on Team.',
       offers: {
         '@type': 'Offer',
         price: '0',
         priceCurrency: 'USD',
-        description: 'Free to start — demo scan and GitHub integration',
+        description: 'Free — Code scanning for up to 3 repositories',
       },
     },
     {

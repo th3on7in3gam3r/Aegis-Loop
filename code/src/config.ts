@@ -11,6 +11,11 @@ export const config = {
   dataDir: process.env.AEGIS_DATA_DIR || join(__dirname, '../data'),
   contactEmail: process.env.CONTACT_EMAIL || 'hello@aegisloop.dev',
   sessionSecret: process.env.SESSION_SECRET || 'aegis-loop-dev-secret-change-in-prod',
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    teamPriceId: process.env.STRIPE_TEAM_PRICE_ID || '',
+  },
   github: {
     clientId: process.env.GITHUB_CLIENT_ID || '',
     clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
@@ -40,4 +45,8 @@ export function oauthConfigured(): boolean {
 export function llmConfigured(): boolean {
   if (config.ai.provider === 'openai') return Boolean(config.ai.openaiKey);
   return Boolean(config.ai.anthropicKey);
+}
+
+export function stripeConfigured(): boolean {
+  return Boolean(config.stripe.secretKey && config.stripe.teamPriceId);
 }

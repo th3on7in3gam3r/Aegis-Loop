@@ -155,9 +155,9 @@
         </a>
       </div>
 
-      <a href="/#pricing" class="sidebar-upgrade" target="_blank" rel="noopener">
-        <span class="sidebar-upgrade-tier">Free plan</span>
-        <span class="sidebar-upgrade-cta">All four modules included →</span>
+      <a href="#" class="sidebar-upgrade" id="sidebarUpgradeBtn">
+        <span class="sidebar-upgrade-tier" id="sidebarPlanTier">Free plan</span>
+        <span class="sidebar-upgrade-cta" id="sidebarPlanCta">Upgrade to Team →</span>
       </a>
 
       <button type="button" class="module-show-guide" id="showOverviewGuide" data-guide="overview">Show Overview guide</button>
@@ -612,6 +612,11 @@
                 </div>
                 <button type="button" class="btn-outline btn-sm" id="settingsThemeBtn">Toggle theme</button>
               </div>
+            </section>
+            <section class="settings-section">
+              <h3>Plan &amp; billing</h3>
+              <p class="settings-desc">Manage your subscription, repo limits, and CI API keys.</p>
+              <div id="settingsBilling" class="settings-card">Loading…</div>
             </section>
             <section class="settings-section">
               <h3>Scanner</h3>

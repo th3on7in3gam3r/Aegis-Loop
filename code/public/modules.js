@@ -406,8 +406,13 @@
     });
   }
 
-  async function switchModule(moduleId) {
-    activeModule = moduleId;
+async function switchModule(moduleId) {
+  if ((moduleId === 'cloud' || moduleId === 'attack' || moduleId === 'protect') && !window.aegisIsTeamPlan?.()) {
+    const labels = { cloud: 'Cloud', attack: 'Attack', protect: 'Protect' };
+    window.aegisToast?.(`${labels[moduleId] || moduleId} requires Team plan — upgrade in Settings`);
+    return;
+  }
+  activeModule = moduleId;
     setModuleNav(moduleId);
     hideModuleViews();
     window.aegisHideAllPanels?.();

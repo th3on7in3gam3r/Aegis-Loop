@@ -1,0 +1,27 @@
+{
+  "name": "aegis",
+  "version": "0.1.0",
+  "description": "Aegis Loop CLI — init repos and run local security scans",
+  "type": "module",
+  "bin": {
+    "aegis": "./bin/aegis.js"
+  },
+  "files": [
+    "bin"
+  ],
+  "keywords": [
+    "security",
+    "sast",
+    "devsecops",
+    "aegis-loop"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/th3on7in3gam3r/Aegis-Loop.git",
+    "directory": "code/cli"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
