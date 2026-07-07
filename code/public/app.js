@@ -294,14 +294,30 @@ function canAutofix() {
   return Boolean(githubUser?.plan?.autofix);
 }
 
+async function handleCheckoutIntent() {
+  if (isTeamPlan()) {
+    showSettingsView();
+    toast('You are already on the Team plan');
+    return;
+  }
+  await startCheckout();
+}
+
 async function startCheckout() {
+  if (healthInfo && healthInfo.billing?.stripe === false) {
+    const contact = healthInfo.contactEmail ?? 'hello@aegisloop.dev';
+    toast(`Online checkout is not live yet — email ${contact} for Team access`);
+    showSettingsView();
+    return;
+  }
   try {
     const { url } = await api('/api/billing/checkout', { method: 'POST', body: JSON.stringify({ seats: 1 }) });
     if (url) window.location.href = url;
   } catch (e) {
+    const contact = healthInfo?.contactEmail ?? 'hello@aegisloop.dev';
     if (e.status === 503) {
-      toast('Billing is not configured yet — email hello@aegisloop.dev for Team access');
-      window.open('/#pricing', '_blank');
+      toast(`Checkout unavailable — email ${contact} for Team access`);
+      showSettingsView();
       return;
     }
     toast(e.message || 'Could not start checkout');
@@ -325,6 +341,7 @@ function updatePlanUi() {
 window.aegisGetUserPlan = () => githubUser?.plan;
 window.aegisIsTeamPlan = isTeamPlan;
 window.aegisStartCheckout = startCheckout;
+window.aegisHandleCheckoutIntent = handleCheckoutIntent;
 
 function sevClass(sev) {
   return sev === 'critical' ? 'sev-critical' : sev === 'warning' ? 'sev-warning' : 'sev-info';
@@ -1482,6 +1499,7 @@ async function renderBillingSettings() {
     const repoLine = billing.reposLimit
       ? `${billing.reposUsed} / ${billing.reposLimit} repositories`
       : `${billing.reposUsed} repositories (unlimited)`;
+    const stripeLive = healthInfo?.billing?.stripe !== false;
     el.innerHTML = `
       <div class="settings-row">
         <div>
@@ -1491,11 +1509,14 @@ async function renderBillingSettings() {
         ${billing.plan === 'free'
           ? '<button type="button" class="btn-primary btn-sm" id="settingsUpgradeBtn">Upgrade to Team</button>'
           : '<button type="button" class="btn-outline btn-sm" id="settingsPortalBtn">Manage billing</button>'}
-      </div>`;
+      </div>
+      ${billing.plan === 'free' && !stripeLive
+        ? `<p class="settings-hint" style="margin-top:12px">Stripe checkout is not configured on this server yet. Email <a href="mailto:${escapeHtml(healthInfo?.contactEmail ?? 'hello@aegisloop.dev')}">${escapeHtml(healthInfo?.contactEmail ?? 'hello@aegisloop.dev')}</a> for manual Team access.</p>`
+        : ''}`;
 
     $('#settingsUpgradeBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
-      startCheckout();
+      handleCheckoutIntent();
     });
     $('#settingsPortalBtn')?.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -1719,7 +1740,7 @@ function renderFindingsTable(findings, opts = {}) {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      startCheckout();
+      handleCheckoutIntent();
     });
   });
 
@@ -2312,7 +2333,7 @@ $('#sidebarUpgradeBtn')?.addEventListener('click', (e) => {
     renderBillingSettings();
     return;
   }
-  startCheckout();
+  handleCheckoutIntent();
 });
 
 $('#overviewGuideHeaderBtn')?.addEventListener('click', () => {
@@ -2408,6 +2429,15 @@ loadAuth().then(async () => {
   const params = new URLSearchParams(location.search);
   if (params.get('auth') === 'success') {
     toast('GitHub connected');
+    const pendingNext = sessionStorage.getItem('aegis-auth-next');
+    if (pendingNext?.includes('checkout=team')) {
+      sessionStorage.removeItem('aegis-auth-next');
+      history.replaceState(null, '', '/app/');
+      await loadAuth();
+      await handleCheckoutIntent();
+      refreshHistory();
+      return;
+    }
     history.replaceState(null, '', '/app/');
     await loadAuth();
   }
@@ -2422,6 +2452,12 @@ loadAuth().then(async () => {
   }
   if (params.get('billing') === 'cancel') {
     history.replaceState(null, '', '/app/');
+  }
+  if (params.get('checkout') === 'team') {
+    history.replaceState(null, '', '/app/');
+    await handleCheckoutIntent();
+    refreshHistory();
+    return;
   }
   const view = params.get('view');
   const moduleParam = params.get('module');

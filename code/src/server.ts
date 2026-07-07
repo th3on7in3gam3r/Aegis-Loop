@@ -87,7 +87,7 @@ function planLimitReply(reply: import('fastify').FastifyReply, message: string) 
   return reply.status(402).send({
     error: message,
     code: 'PLAN_LIMIT',
-    upgradeUrl: `${config.appUrl}/#pricing`,
+    upgradeUrl: `${config.appUrl}/app/?checkout=team`,
   });
 }
 

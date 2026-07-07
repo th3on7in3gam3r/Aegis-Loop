@@ -1269,7 +1269,7 @@
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Autofix pull requests</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> GitHub Action CI scans &amp; API keys</li>
           </ul>
-          <a href="/login" class="btn btn-primary">Start for Free</a>
+          <a href="/login?next=%2Fapp%2F%3Fcheckout%3Dteam" class="btn btn-primary" id="pricingTeamBtn">Upgrade to Team</a>
         </div>
         <div class="price-card reveal reveal-d2">
           <div class="price-tier">Enterprise</div>
@@ -1655,14 +1655,30 @@
     });
   }
 
-  // Show Dashboard in nav only when signed in
+  // Show Dashboard in nav when signed in; wire Team pricing CTA
   fetch('/api/auth/me', { credentials: 'include' })
     .then((res) => (res.ok ? res.json() : { connected: false }))
     .then((data) => {
-      if (!data.connected) return;
-      document.querySelectorAll('.nav-auth-only').forEach((el) => {
-        el.hidden = false;
-      });
+      const teamBtn = document.getElementById('pricingTeamBtn');
+      if (data.connected) {
+        document.querySelectorAll('.nav-auth-only').forEach((el) => {
+          el.hidden = false;
+        });
+        if (teamBtn) {
+          const onTeam = data.plan?.plan === 'team' || data.plan?.plan === 'enterprise';
+          if (onTeam) {
+            teamBtn.href = '/app/?view=settings';
+            teamBtn.textContent = 'Manage billing';
+            teamBtn.classList.remove('btn-primary');
+            teamBtn.classList.add('btn-ghost');
+          } else {
+            teamBtn.href = '/app/?checkout=team';
+            teamBtn.textContent = 'Upgrade to Team';
+          }
+        }
+      } else if (teamBtn) {
+        teamBtn.href = '/login?next=' + encodeURIComponent('/app/?checkout=team');
+      }
     })
     .catch(() => {});
 

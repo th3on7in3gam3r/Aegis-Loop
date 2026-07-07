@@ -32,12 +32,12 @@ export function canScanRepo(account: Account, repo: string): { ok: true } | { ok
 export function assertModuleAccess(plan: PlanId, module: AegisModule): string | null {
   if (planAllowsModule(plan, module)) return null;
   const label = module.charAt(0).toUpperCase() + module.slice(1);
-  return `${label} module requires a Team plan. Upgrade at /#pricing.`;
+  return `${label} module requires a Team plan. Upgrade in Settings or visit /app/?checkout=team.`;
 }
 
 export function assertAutofixAccess(plan: PlanId): string | null {
   if (planAllowsAutofix(plan)) return null;
-  return 'A-Fix requires a Team plan. Upgrade at /#pricing.';
+  return 'A-Fix requires a Team plan. Upgrade in Settings or visit /app/?checkout=team.';
 }
 
 export function planSummary(account: Account) {

@@ -1,5 +1,6 @@
 const $ = (sel) => document.querySelector(sel);
 const THEME_KEY = 'aegis-theme';
+const AUTH_NEXT_KEY = 'aegis-auth-next';
 
 function getTheme() {
   return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
@@ -29,6 +30,17 @@ function toast(msg) {
 
 const SWITCH_GITHUB_KEY = 'aegis-github-switch';
 
+function safeNextPath(path) {
+  if (!path || !path.startsWith('/') || path.startsWith('//')) return '/app/';
+  return path;
+}
+
+function consumeAuthNext() {
+  const next = sessionStorage.getItem(AUTH_NEXT_KEY);
+  if (next) sessionStorage.removeItem(AUTH_NEXT_KEY);
+  return safeNextPath(next);
+}
+
 async function clearAegisSession() {
   try {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
@@ -52,7 +64,7 @@ async function checkAuth() {
     const res = await fetch('/api/auth/me', { credentials: 'include' });
     const data = await res.json();
     if (data.connected) {
-      window.location.href = '/app/';
+      window.location.href = consumeAuthNext();
     }
   } catch { /* stay on login */ }
 }
@@ -70,7 +82,7 @@ async function connectWithPat() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Connection failed');
-    window.location.href = '/app/';
+    window.location.href = consumeAuthNext();
   } catch (e) {
     toast(e.message);
   }
@@ -121,6 +133,12 @@ $('#patInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') connectWithPat();
 });
 
+const loginParams = new URLSearchParams(window.location.search);
+const next = loginParams.get('next');
+if (next) {
+  sessionStorage.setItem(AUTH_NEXT_KEY, safeNextPath(next));
+}
+
 checkAuth();
 setupOAuth();
 
@@ -129,7 +147,6 @@ if (localStorage.getItem(SWITCH_GITHUB_KEY)) {
   showSwitchBanner();
 }
 
-const loginParams = new URLSearchParams(window.location.search);
 if (loginParams.get('auth') === 'failed') {
   toast('GitHub sign-in failed — try again or use a personal access token');
   history.replaceState(null, '', '/login');
