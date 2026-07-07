@@ -718,6 +718,200 @@
   .partner-inline-link { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
   .partner-inline-link:hover { color: var(--violet-bright); }
 
+  /* ── Motto (3D loop) ── */
+  .motto {
+    padding: 100px 0 110px;
+    position: relative;
+    overflow: hidden;
+  }
+  .motto::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 55% 45% at 22% 50%, rgba(124,58,237,0.12), transparent 70%),
+      radial-gradient(ellipse 40% 35% at 78% 40%, rgba(14,165,233,0.08), transparent 65%);
+    pointer-events: none;
+  }
+  .motto-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 56px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+  @media (max-width: 960px) {
+    .motto-grid { grid-template-columns: 1fr; gap: 40px; }
+    .motto-visual { order: -1; }
+  }
+  .motto-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 380px;
+  }
+  .motto-scene {
+    position: relative;
+    width: min(100%, 400px);
+    height: 380px;
+    perspective: 1000px;
+    transform-style: preserve-3d;
+  }
+  .motto-scene-inner {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    transition: transform 0.15s ease-out;
+  }
+  .motto-orbit {
+    position: absolute;
+    inset: 24px;
+    transform-style: preserve-3d;
+    animation: motto-orbit-spin 28s linear infinite;
+  }
+  @keyframes motto-orbit-spin {
+    from { transform: rotateX(62deg) rotateZ(0deg); }
+    to { transform: rotateX(62deg) rotateZ(360deg); }
+  }
+  .motto-orbit-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(124,58,237,0.35);
+    box-shadow:
+      0 0 40px rgba(124,58,237,0.2),
+      inset 0 0 30px rgba(124,58,237,0.08);
+  }
+  .motto-orbit-ring::after {
+    content: '';
+    position: absolute;
+    inset: 18px;
+    border-radius: 50%;
+    border: 1px dashed rgba(124,58,237,0.2);
+  }
+  .motto-node {
+    position: absolute;
+    inset: 0;
+    transform: rotate(calc(var(--i) * 120deg));
+    pointer-events: none;
+  }
+  .motto-node span {
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%) rotate(calc(var(--i) * -120deg)) rotateX(-62deg);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--violet-bright);
+    background: rgba(255,255,255,0.95);
+    border: 1px solid var(--violet-ring);
+    padding: 7px 12px;
+    border-radius: 100px;
+    box-shadow: 0 4px 20px rgba(124,58,237,0.18);
+    white-space: nowrap;
+  }
+  .motto-node-find { --i: 0; }
+  .motto-node-fix { --i: 1; }
+  .motto-node-ship { --i: 2; }
+  .motto-shield-wrap {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 140px;
+    height: 160px;
+    margin: -80px 0 0 -70px;
+    transform-style: preserve-3d;
+    animation: motto-shield-float 5s ease-in-out infinite;
+  }
+  @keyframes motto-shield-float {
+    0%, 100% { transform: translateZ(48px) translateY(0) rotateY(-8deg); }
+    50% { transform: translateZ(64px) translateY(-10px) rotateY(8deg); }
+  }
+  .motto-shield {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(145deg, #8b5cf6 0%, #6d28d9 45%, #4c1d95 100%);
+    clip-path: polygon(50% 0%, 100% 18%, 100% 62%, 50% 100%, 0% 62%, 0% 18%);
+    box-shadow:
+      0 24px 60px rgba(109,40,217,0.45),
+      0 0 0 1px rgba(255,255,255,0.15) inset,
+      0 -8px 24px rgba(255,255,255,0.12) inset;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateZ(20px);
+  }
+  .motto-shield svg { width: 52px; height: 52px; opacity: 0.95; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.2)); }
+  .motto-shield-glow {
+    position: absolute;
+    inset: -30%;
+    background: radial-gradient(circle, rgba(139,92,246,0.45), transparent 65%);
+    transform: translateZ(-10px);
+    animation: motto-glow-pulse 4s ease-in-out infinite;
+  }
+  @keyframes motto-glow-pulse {
+    0%, 100% { opacity: 0.7; transform: translateZ(-10px) scale(1); }
+    50% { opacity: 1; transform: translateZ(-10px) scale(1.08); }
+  }
+  .motto-loop-label {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .motto-copy .section-title { margin-bottom: 28px; }
+  .motto-pillars { display: grid; gap: 14px; margin-bottom: 28px; }
+  .motto-pillar {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    transition: border-color 0.3s, transform 0.3s var(--ease-out), box-shadow 0.3s;
+  }
+  .motto-pillar:hover {
+    border-color: rgba(124,58,237,0.3);
+    transform: translateX(6px);
+    box-shadow: 0 8px 28px rgba(124,58,237,0.1);
+  }
+  .motto-pillar h3 {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+    color: var(--violet-bright);
+  }
+  .motto-pillar p { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin: 0; }
+  .motto-tagline {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--violet-bright) 55%, var(--violet-glow) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .motto-tagline-sub {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    max-width: 42ch;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .motto-orbit, .motto-shield-wrap, .motto-shield-glow { animation: none; }
+    .motto-scene-inner { transform: none !important; }
+  }
+
   /* ── Contact ── */
   .contact { padding: 100px 0; }
   .contact-grid {
@@ -1064,6 +1258,50 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MOTTO -->
+  <section class="motto divider" id="motto">
+    <div class="container motto-grid">
+      <div class="motto-visual reveal">
+        <div class="motto-scene" id="mottoScene" aria-hidden="true">
+          <div class="motto-scene-inner" id="mottoSceneInner">
+            <div class="motto-orbit">
+              <div class="motto-orbit-ring"></div>
+              <span class="motto-node motto-node-find"><span>Find</span></span>
+              <span class="motto-node motto-node-fix"><span>Fix</span></span>
+              <span class="motto-node motto-node-ship"><span>Ship</span></span>
+            </div>
+            <div class="motto-shield-wrap">
+              <div class="motto-shield-glow"></div>
+              <div class="motto-shield">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z" fill="rgba(255,255,255,0.2)" stroke="#fff" stroke-width="1.2"/>
+                  <path d="M12 8v5M9.5 10.5h5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </div>
+            </div>
+            <span class="motto-loop-label">The loop</span>
+          </div>
+        </div>
+      </div>
+      <div class="motto-copy reveal reveal-d1">
+        <span class="section-label">Our motto</span>
+        <h2 class="section-title">Shield the stack.<br>Close the loop.</h2>
+        <div class="motto-pillars">
+          <article class="motto-pillar">
+            <h3>Aegis</h3>
+            <p>Shield, protection — the classic security metaphor behind everything we build.</p>
+          </article>
+          <article class="motto-pillar">
+            <h3>Loop</h3>
+            <p>Continuous cycle — find → fix → ship. Four modules, one closed workflow.</p>
+          </article>
+        </div>
+        <p class="motto-tagline">Find it. Fix it. Ship it.</p>
+        <p class="motto-tagline-sub">Dev-first, action-oriented — not compliance theater.</p>
       </div>
     </div>
   </section>
@@ -1632,6 +1870,21 @@
     });
   }, { threshold: 0.5 });
   counters.forEach(el => countIO.observe(el));
+
+  // Motto 3D parallax (mouse)
+  const mottoScene = document.getElementById('mottoScene');
+  const mottoSceneInner = document.getElementById('mottoSceneInner');
+  if (mottoScene && mottoSceneInner && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    mottoScene.addEventListener('mousemove', (e) => {
+      const rect = mottoScene.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      mottoSceneInner.style.transform = `rotateY(${x * 14}deg) rotateX(${-y * 10}deg)`;
+    });
+    mottoScene.addEventListener('mouseleave', () => {
+      mottoSceneInner.style.transform = '';
+    });
+  }
 
   // Contact form — opens mail client (no backend inbox yet)
   const contactForm = document.getElementById('contactForm');
