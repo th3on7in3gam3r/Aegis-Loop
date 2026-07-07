@@ -34,7 +34,8 @@ const DOC_SECTIONS = [
     html: `<p>Sign in with GitHub, open <strong>Repositories</strong>, and click <strong>Scan</strong> on any repo — or use <strong>+ New scan</strong> for a single repo, bulk scan, or pull request.</p>
       <ul><li><strong>Repositories</strong> — browse and scan all GitHub repos you can access</li>
       <li><strong>+ New scan</strong> — single repo, all repos, or PR scan</li>
-      <li><strong>A-Fix</strong> — open autofix panel for the first open finding</li></ul>`,
+      <li><strong>A-Fix</strong> — open autofix panel for the first open finding</li>
+      <li><strong>CI on every PR</strong> — see <a href="#" class="doc-jump" data-doc="ci">CI / GitHub Actions</a> for <code>aegis init</code> setup</li></ul>`,
   },
   {
     id: 'overview',
@@ -88,17 +89,53 @@ const DOC_SECTIONS = [
       <p>PR scans can post a markdown summary comment and a <code>aegis-loop/code</code> commit check. Webhooks auto-scan on pull request events when configured on the server.</p>`,
   },
   {
+    id: 'ci',
+    title: 'CI / GitHub Actions',
+    keywords: 'ci github actions workflow npx aegis init api key secrets cli local scan',
+    html: `<p>Run Aegis Loop on every pull request with the CLI and a GitHub Action. You scaffold files locally, add one API key as a GitHub secret, and the workflow calls this server on each PR.</p>
+      <h4 style="margin:16px 0 8px;font-size:13px">1 — Scaffold your repo</h4>
+      <p>From your project root (where <code>.git</code> lives):</p>
+      <pre style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;overflow-x:auto;margin:8px 0 16px"><code># Until the package is on npm, run from a clone of Aegis Loop:
+node /path/to/Aegis-Loop/code/cli/bin/aegis.js init
+
+# After npm publish (coming soon):
+npx aegis init</code></pre>
+      <p>This writes:</p>
+      <ul>
+        <li><code>.aegis/config.yml</code> — local config</li>
+        <li><code>.github/workflows/aegis-loop.yml</code> — runs on <code>pull_request</code> events</li>
+      </ul>
+      <p>Commit and push both files to your default branch so GitHub can run the workflow.</p>
+      <h4 style="margin:16px 0 8px;font-size:13px">2 — Create an API key</h4>
+      <p>Open <strong>Settings → CI / GitHub Actions</strong> in this dashboard and click <strong>Create key</strong>. Copy the full key immediately — it is only shown once.</p>
+      <h4 style="margin:16px 0 8px;font-size:13px">3 — Add GitHub Secrets</h4>
+      <p>In your repo on GitHub: <strong>Settings → Secrets and variables → Actions → New repository secret</strong></p>
+      <ul>
+        <li><code>AEGIS_API_KEY</code> — the key you just created</li>
+        <li><code>AEGIS_API_URL</code> — optional; defaults to <code>https://aegis-loop.onrender.com</code>. Set this if you self-host Aegis Loop.</li>
+      </ul>
+      <h4 style="margin:16px 0 8px;font-size:13px">4 — Open a pull request</h4>
+      <p>The workflow posts to <code>POST /api/ci/scan</code> with your repo name and PR number. Results appear in this dashboard under your account. Free plan: up to 3 repos; Team: unlimited.</p>
+      <h4 style="margin:16px 0 8px;font-size:13px">Local scan (optional)</h4>
+      <pre style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:12px;overflow-x:auto;margin:8px 0"><code>npx aegis scan .
+# or: node /path/to/Aegis-Loop/code/cli/bin/aegis.js scan .</code></pre>
+      <p>Runs the same static rules locally without GitHub — useful before pushing.</p>`,
+  },
+  {
     id: 'api',
     title: 'API reference',
-    keywords: 'api endpoint health scans autofix rest',
+    keywords: 'api endpoint health scans autofix rest ci keys billing',
     html: `<ul>
       <li><code>GET /api/health</code> — server status</li>
       <li><code>GET /api/auth/me</code> — current session</li>
       <li><code>GET /api/github/repos</code> — list repositories</li>
       <li><code>POST /api/scans</code> — scan <code>{ repo, branch }</code></li>
       <li><code>POST /api/scans/pull-request</code> — scan PR</li>
+      <li><code>POST /api/ci/scan</code> — CI scan (Bearer API key) <code>{ repo, pr }</code></li>
+      <li><code>POST /api/keys</code> — create API key (session auth)</li>
       <li><code>POST /api/scans/:id/findings/:fid/autofix</code> — apply fix</li>
-    </ul>`,
+    </ul>
+      <p>Full CI walkthrough: <a href="#" class="doc-jump" data-doc="ci">CI / GitHub Actions</a>.</p>`,
   },
   {
     id: 'performance',
@@ -1175,6 +1212,14 @@ function renderIntegrations() {
     </article>
     <article class="integration-card">
       <div class="integration-card-head">
+        <h3>GitHub Actions (CI)</h3>
+        <span class="status-pill on">Available</span>
+      </div>
+      <p>Run <code>aegis init</code> in your repo, create an API key in <strong>Settings → CI / GitHub Actions</strong>, and add <code>AEGIS_API_KEY</code> as a GitHub secret. Scans run on every pull request.</p>
+      <button type="button" class="btn-outline btn-sm" id="integrationsCiDocsBtn">CI setup guide</button>
+    </article>
+    <article class="integration-card">
+      <div class="integration-card-head">
         <h3>Pull request checks</h3>
         <span class="status-pill on">Available</span>
       </div>
@@ -1220,6 +1265,7 @@ function renderIntegrations() {
     </article>`;
 
   $('#integrationsConnectBtn')?.addEventListener('click', openAuthModal);
+  $('#integrationsCiDocsBtn')?.addEventListener('click', () => showDocsView('ci'));
 }
 
 function showReposView() {
@@ -1325,6 +1371,7 @@ function renderSettings() {
       </div>`;
   }
 
+  renderCiSettings();
   renderBillingSettings();
 
   const scanner = $('#settingsScanner');
@@ -1344,6 +1391,73 @@ function renderSettings() {
     </ul>`;
 
   updateThemeLabels();
+}
+
+async function renderCiSettings() {
+  const el = $('#settingsCi');
+  if (!el) return;
+  const apiUrl = window.location.origin;
+  if (!githubUser?.connected) {
+    el.innerHTML = '<p class="settings-hint">Sign in to create API keys for GitHub Actions.</p>';
+    return;
+  }
+  try {
+    const billing = await api('/api/billing/plan');
+    const keysHtml = billing.apiKeys?.length
+      ? billing.apiKeys.map((k) =>
+          `<li><code>${escapeHtml(k.prefix)}…</code> ${escapeHtml(k.label)} <button type="button" class="btn-sm-outline revoke-key-btn" data-id="${escapeHtml(k.id)}">Revoke</button></li>`
+        ).join('')
+      : '<li class="settings-hint">No API keys yet</li>';
+
+    el.innerHTML = `
+      <ol class="settings-steps" style="margin:0 0 18px;padding-left:20px;font-size:14px;color:var(--text-secondary);line-height:1.65">
+        <li style="margin-bottom:10px">In your repo root, run <code>aegis init</code> (see commands below) and commit <code>.aegis/</code> + <code>.github/workflows/aegis-loop.yml</code></li>
+        <li style="margin-bottom:10px">Create an API key here → add as <code>AEGIS_API_KEY</code> in GitHub <strong>Settings → Secrets → Actions</strong></li>
+        <li>Optional: set <code>AEGIS_API_URL</code> to <code>${escapeHtml(apiUrl)}</code> if not using the default hosted URL</li>
+        <li>Open a pull request — the workflow scans automatically</li>
+      </ol>
+      <h4 style="font-size:13px;margin:0 0 8px">Init command</h4>
+      <pre class="settings-code" style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;overflow-x:auto;margin:0 0 14px"><code># From a clone until npm publish:
+node /path/to/Aegis-Loop/code/cli/bin/aegis.js init
+
+# After npm publish:
+npx aegis init</code></pre>
+      <div class="settings-row" style="margin-bottom:14px">
+        <div><strong>API keys</strong><span class="settings-hint">Bearer token for <code>/api/ci/scan</code></span></div>
+        <button type="button" class="btn-outline btn-sm" id="settingsCreateKeyBtn">Create key</button>
+      </div>
+      <ul class="settings-list">${keysHtml}</ul>
+      <p class="settings-hint" id="settingsNewKey" style="margin-top:10px"></p>
+      <button type="button" class="btn-ghost btn-sm" id="settingsOpenCiDocs" style="margin-top:12px">Full CI guide in Documentation →</button>`;
+
+    $('#settingsCreateKeyBtn')?.addEventListener('click', async () => {
+      try {
+        const res = await api('/api/keys', { method: 'POST', body: JSON.stringify({ label: 'GitHub Actions' }) });
+        $('#settingsNewKey').innerHTML = `New key (copy now): <code style="word-break:break-all">${escapeHtml(res.key)}</code>`;
+        toast('API key created');
+        renderCiSettings();
+      } catch (err) {
+        toast(err.message || 'Could not create key');
+      }
+    });
+    $('#settingsOpenCiDocs')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      showDocsView('ci');
+    });
+    el.querySelectorAll('.revoke-key-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          await api(`/api/keys/${btn.dataset.id}`, { method: 'DELETE' });
+          toast('API key revoked');
+          renderCiSettings();
+        } catch (err) {
+          toast(err.message || 'Could not revoke key');
+        }
+      });
+    });
+  } catch (e) {
+    el.innerHTML = `<p class="settings-hint">${escapeHtml(e.message || 'Could not load CI settings')}</p>`;
+  }
 }
 
 async function renderBillingSettings() {
@@ -1368,14 +1482,8 @@ async function renderBillingSettings() {
     const repoLine = billing.reposLimit
       ? `${billing.reposUsed} / ${billing.reposLimit} repositories`
       : `${billing.reposUsed} repositories (unlimited)`;
-    const keysHtml = billing.apiKeys?.length
-      ? billing.apiKeys.map((k) =>
-          `<li><code>${escapeHtml(k.prefix)}…</code> ${escapeHtml(k.label)} <button type="button" class="btn-sm-outline revoke-key-btn" data-id="${escapeHtml(k.id)}">Revoke</button></li>`
-        ).join('')
-      : '<li class="settings-hint">No API keys yet — create one for GitHub Actions</li>';
-
     el.innerHTML = `
-      <div class="settings-row" style="margin-bottom:14px">
+      <div class="settings-row">
         <div>
           <strong>${escapeHtml(billing.label)} plan</strong>
           <span class="settings-hint">${repoLine} · A-Fix ${billing.autofix ? 'enabled' : 'Team only'}</span>
@@ -1383,15 +1491,7 @@ async function renderBillingSettings() {
         ${billing.plan === 'free'
           ? '<button type="button" class="btn-primary btn-sm" id="settingsUpgradeBtn">Upgrade to Team</button>'
           : '<button type="button" class="btn-outline btn-sm" id="settingsPortalBtn">Manage billing</button>'}
-      </div>
-      <h4 style="font-size:13px;margin:0 0 8px">CLI setup</h4>
-      <p class="settings-hint" style="margin-bottom:8px">Run <code>npx aegis init</code> in your repo, then add an API key below as <code>AEGIS_API_KEY</code> in GitHub Secrets.</p>
-      <div class="settings-row" style="margin-bottom:14px">
-        <div><strong>API keys</strong><span class="settings-hint">For CI / GitHub Actions</span></div>
-        <button type="button" class="btn-outline btn-sm" id="settingsCreateKeyBtn">Create key</button>
-      </div>
-      <ul class="settings-list">${keysHtml}</ul>
-      <p class="settings-hint" id="settingsNewKey" style="margin-top:10px"></p>`;
+      </div>`;
 
     $('#settingsUpgradeBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1405,27 +1505,6 @@ async function renderBillingSettings() {
       } catch (err) {
         toast(err.message || 'Could not open billing portal');
       }
-    });
-    $('#settingsCreateKeyBtn')?.addEventListener('click', async () => {
-      try {
-        const res = await api('/api/keys', { method: 'POST', body: JSON.stringify({ label: 'GitHub Actions' }) });
-        $('#settingsNewKey').innerHTML = `New key (copy now): <code style="word-break:break-all">${escapeHtml(res.key)}</code>`;
-        toast('API key created');
-        renderBillingSettings();
-      } catch (err) {
-        toast(err.message || 'Could not create key');
-      }
-    });
-    el.querySelectorAll('.revoke-key-btn').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        try {
-          await api(`/api/keys/${btn.dataset.id}`, { method: 'DELETE' });
-          toast('API key revoked');
-          renderBillingSettings();
-        } catch (err) {
-          toast(err.message || 'Could not revoke key');
-        }
-      });
     });
   } catch (e) {
     el.innerHTML = `<p class="settings-hint">${escapeHtml(e.message || 'Could not load billing')}</p>`;
@@ -2192,6 +2271,7 @@ $('#settingsLogoutBtn').addEventListener('click', logout);
 $('#docsBody').addEventListener('click', (e) => {
   const btn = e.target.closest('.doc-jump');
   if (!btn?.dataset.doc) return;
+  e.preventDefault();
   $$('.doc-jump').forEach((b) => b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById(`doc-${btn.dataset.doc}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
