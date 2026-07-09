@@ -45,6 +45,10 @@ export function loadAccountStore(): void {
   }
 }
 
+export function accountExists(login: string): boolean {
+  return accounts.has(login);
+}
+
 export function getAccount(login: string): Account {
   let account = accounts.get(login);
   if (!account) {

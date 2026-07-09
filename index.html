@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="growth-stack-ai-cmo-url" content="http://localhost:3000/app">
 <title>Aegis Loop — Find it. Fix it. Ship it.</title>
 <meta name="description" content="Aegis Loop scans GitHub repos and pull requests for secrets, injection flaws, and vulnerable dependencies — with cloud IaC, URL probes, and WAF rule export on Team.">
 <meta name="robots" content="index, follow">
@@ -1499,6 +1500,39 @@
     </div>
   </section>
 
+  <!-- GROWTH STACK -->
+  <section class="partner-promo divider" id="growth-stack">
+    <div class="container reveal">
+      <div class="section-head" style="margin-bottom:2rem">
+        <span class="section-label">Growth stack</span>
+        <h2 class="section-title">Secure, cite, create, publish</h2>
+        <p class="section-desc">Aegis is the dev-security layer. These sister products from <a href="https://www.biblefunlandstudios.com/" target="_blank" rel="noopener" class="partner-inline-link">Bible Funland Studios</a> cover marketing war room, AI citations, and social autopilot.</p>
+      </div>
+      <div class="pricing-grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+        <div class="partner-card" style="margin:0">
+          <div class="partner-card-body">
+            <span class="partner-eyebrow">Sister product</span>
+            <h2 style="font-size:1.35rem">Kerygma Social</h2>
+            <p>Drop your URL — get a month of social posts to approve and publish on autopilot.</p>
+          </div>
+          <div class="partner-card-actions">
+            <a href="https://kerygmasocial.com" class="btn btn-ghost" target="_blank" rel="noopener">kerygmasocial.com <span class="btn-arrow">→</span></a>
+          </div>
+        </div>
+        <div class="partner-card" style="margin:0">
+          <div class="partner-card-body">
+            <span class="partner-eyebrow">Sister product</span>
+            <h2 style="font-size:1.35rem">AI CMO</h2>
+            <p>Marketing war room — brand audits, SEO agent, campaigns, and content workspace.</p>
+          </div>
+          <div class="partner-card-actions">
+            <a href="http://localhost:3000/app" class="btn btn-ghost" target="_blank" rel="noopener" id="ai-cmo-stack-link">Open AI CMO <span class="btn-arrow">→</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- PRICING -->
   <section class="pricing divider" id="pricing">
     <div class="container">
@@ -1791,6 +1825,9 @@
           <li><a href="#about">About</a></li>
           <li><a href="#contact">Contact</a></li>
           <li><a href="https://getcitepilot.com" target="_blank" rel="noopener">CitePilot (GEO)</a></li>
+          <li><a href="https://kerygmasocial.com" target="_blank" rel="noopener">Kerygma Social</a></li>
+          <li><a href="http://localhost:3000/app" target="_blank" rel="noopener" class="js-ai-cmo-link">AI CMO</a></li>
+          <li><a href="https://www.biblefunlandstudios.com/" target="_blank" rel="noopener">Bible Funland Studios</a></li>
           <li><a href="mailto:hello@aegisloop.dev" class="js-contact-email">hello@aegisloop.dev</a></li>
           <li><a href="mailto:sales@aegisloop.dev" class="js-contact-email">sales@aegisloop.dev</a></li>
         </ul>
@@ -1810,6 +1847,8 @@
           <li><a href="https://github.com/th3on7in3gam3r/Aegis-Loop#readme" target="_blank" rel="noopener">GitHub</a></li>
           <li><a href="/llms.txt">llms.txt</a></li>
           <li><a href="https://getcitepilot.com" target="_blank" rel="noopener">CitePilot</a></li>
+          <li><a href="https://kerygmasocial.com" target="_blank" rel="noopener">Kerygma Social</a></li>
+          <li><a href="http://localhost:3000/app" target="_blank" rel="noopener" class="js-ai-cmo-link">AI CMO</a></li>
           <li><a href="#resources">Resources</a></li>
         </ul>
       </div>
@@ -1956,6 +1995,15 @@
       });
     })
     .catch(() => {});
+
+  (function () {
+    var meta = document.querySelector('meta[name="growth-stack-ai-cmo-url"]');
+    var aiCmoUrl = meta && meta.getAttribute('content');
+    if (!aiCmoUrl) return;
+    document.querySelectorAll('.js-ai-cmo-link, #ai-cmo-stack-link').forEach(function (el) {
+      el.href = aiCmoUrl;
+    });
+  })();
 </script>
 </body>
 </html>

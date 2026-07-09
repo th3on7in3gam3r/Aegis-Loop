@@ -23,6 +23,13 @@
   function dismiss(choice) {
     localStorage.setItem(KEY, choice);
     bar.remove();
+    window.dispatchEvent(new CustomEvent('aegis-cookie-consent', { detail: choice }));
+    if (choice === 'all') {
+      var script = document.createElement('script');
+      script.src = '/assets/aegis-analytics.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    }
   }
 
   bar.addEventListener('click', function (e) {
@@ -30,6 +37,13 @@
     if (!btn) return;
     dismiss(btn.getAttribute('data-choice'));
   });
+
+  if (localStorage.getItem(KEY) === 'all') {
+    var script = document.createElement('script');
+    script.src = '/assets/aegis-analytics.js';
+    script.defer = true;
+    document.head.appendChild(script);
+  }
 
   document.body.appendChild(bar);
 })();

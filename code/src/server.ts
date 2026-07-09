@@ -28,6 +28,7 @@ import { handleGitHubWebhook } from './github/webhooks.js';
 import { scanDirectory } from './scanner/index.js';
 import { scanCloudDirectory } from './modules/cloud/scanner.js';
 import { scanAttackTarget, scanAttackTargets } from './modules/attack/scanner.js';
+import { summarizeUrlCheck } from './modules/attack/url-check.js';
 import {
   evaluateProtectRequest,
   listProtectEvents,
@@ -48,16 +49,26 @@ import { requireAuth, resolveAuth } from './billing/auth.js';
 import { assertAutofixAccess, assertModuleAccess, canScanRepo, planSummary } from './billing/limits.js';
 import {
   createApiKey,
+  accountExists,
   getAccount,
   loadAccountStore,
   revokeApiKey,
 } from './billing/store.js';
+import { emitUserSignup } from './billing/studioOps.js';
+import { buildAnalyticsSummary } from './analytics/aggregate.js';
+import { buildRuleInsights, enrichInsightsWithAi } from './analytics/insights.js';
+import { ingestAnalyticsEvents, listAnalyticsEvents, loadAnalyticsStore, recordServerConversion } from './analytics/store.js';
 import {
   createBillingPortalSession,
   createCheckoutSession,
   handleStripeWebhook,
   stripeConfigured,
 } from './billing/stripe.js';
+import {
+  handleStudioBillingPartnerEvent,
+  verifyStudioBillingSignature,
+  type StudioBillingPartnerEvent,
+} from './billing/studioPartner.js';
 import { getScan, listScans, loadStore, saveScan, updateFinding, updateScanMeta } from './store.js';
 import {
   appBase,
@@ -77,6 +88,22 @@ const app = Fastify({ logger: true });
 loadStore();
 loadProtectStore();
 loadAccountStore();
+loadAnalyticsStore();
+
+const analyticsRate = new Map<string, { count: number; reset: number }>();
+const ANALYTICS_RATE_LIMIT = 120;
+const ANALYTICS_RATE_WINDOW_MS = 60_000;
+
+function analyticsRateOk(ip: string): boolean {
+  const now = Date.now();
+  const row = analyticsRate.get(ip);
+  if (!row || now > row.reset) {
+    analyticsRate.set(ip, { count: 1, reset: now + ANALYTICS_RATE_WINDOW_MS });
+    return true;
+  }
+  row.count += 1;
+  return row.count <= ANALYTICS_RATE_LIMIT;
+}
 
 function tagScan<T extends import('./types.js').ScanResult>(scan: T, login: string): T {
   scan.userLogin = login;
@@ -115,6 +142,21 @@ app.get('/sitemap.xml', async (_req, reply) => {
 app.get('/llms.txt', async (_req, reply) => {
   const base = appBase(config.appUrl);
   return reply.type('text/plain; charset=utf-8').send(llmsTxt(base));
+});
+
+/** Partner API — marketer-safe URL header probe (growth stack / AI-CMO). */
+app.get('/api/v1/url-check', async (req, reply) => {
+  const url = (req.query as { url?: string }).url?.trim();
+  if (!url) {
+    return reply.code(400).send({ error: 'url query parameter is required' });
+  }
+  try {
+    const result = await summarizeUrlCheck(url);
+    return reply.send(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'URL check failed';
+    return reply.code(400).send({ error: message });
+  }
 });
 
 // Marketing landing page at /
@@ -172,7 +214,12 @@ await app.register(fastifyStatic, {
 // Preserve raw body for webhook signature verification
 app.addHook('preParsing', async (request, _reply, payload) => {
   const path = request.url.split('?')[0];
-  if (!path.startsWith('/api/webhooks/github') && !path.startsWith('/api/billing/webhook')) return payload;
+  if (
+    !path.startsWith('/api/webhooks/github') &&
+    !path.startsWith('/api/billing/webhook') &&
+    !path.startsWith('/api/partner/studio-billing')
+  )
+    return payload;
 
   const chunks: Buffer[] = [];
   for await (const chunk of payload) {
@@ -230,12 +277,40 @@ app.get('/api/health', async () => ({
   },
 }));
 
+app.post('/api/analytics/collect', async (req, reply) => {
+  const ip = req.ip || 'unknown';
+  if (!analyticsRateOk(ip)) {
+    return reply.status(429).send({ error: 'Rate limit exceeded' });
+  }
+  const body = (req.body ?? {}) as { events?: unknown[] };
+  if (!Array.isArray(body.events) || !body.events.length) {
+    return reply.status(400).send({ error: 'events array required' });
+  }
+  if (body.events.length > 25) {
+    return reply.status(400).send({ error: 'Too many events in batch' });
+  }
+  const accepted = ingestAnalyticsEvents(body.events);
+  return { ok: true, accepted: accepted.length };
+});
+
+app.get('/api/analytics/summary', async (req, reply) => {
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  const days = Math.min(30, Math.max(1, Number((req.query as { days?: string }).days) || 7));
+  const summary = buildAnalyticsSummary(listAnalyticsEvents(), days);
+  summary.insights = buildRuleInsights(summary);
+  summary.insights = await enrichInsightsWithAi(summary, summary.insights);
+  return summary;
+});
+
 app.addHook('preHandler', async (req, reply) => {
   const path = req.url.split('?')[0];
   if (
     path.startsWith('/api/auth') ||
     path.startsWith('/api/webhooks') ||
-    path.startsWith('/api/billing/webhook')
+    path.startsWith('/api/billing/webhook') ||
+    path.startsWith('/api/partner/studio-billing') ||
+    path === '/api/analytics/collect'
   ) {
     return;
   }
@@ -280,6 +355,18 @@ app.get('/api/auth/github', async (_req, reply) => {
   return reply.redirect(startOAuth(reply));
 });
 
+function registerAuthenticatedUser(
+  login: string,
+  authMethod: 'oauth' | 'pat',
+): void {
+  const isNew = !accountExists(login);
+  getAccount(login);
+  if (isNew) {
+    emitUserSignup({ githubLogin: login, authMethod, email: null });
+    recordServerConversion('signup', { githubLogin: login, path: '/login' });
+  }
+}
+
 app.get('/api/auth/github/callback', async (req, reply) => {
   const { code, state } = req.query as { code?: string; state?: string };
   if (!code || !state || !consumeOAuthState(req, reply, state)) {
@@ -289,6 +376,7 @@ app.get('/api/auth/github/callback', async (req, reply) => {
 
   try {
     const session = await exchangeCode(code);
+    registerAuthenticatedUser(session.login, 'oauth');
     setSessionCookie(reply, session);
     return reply.redirect('/app/?auth=success');
   } catch (err) {
@@ -305,6 +393,7 @@ app.post('/api/auth/pat', async (req, reply) => {
 
   try {
     const session = await sessionFromPat(token.trim());
+    registerAuthenticatedUser(session.login, 'pat');
     setSessionCookie(reply, session);
     return { connected: true, login: session.login, avatarUrl: session.avatarUrl };
   } catch (err) {
@@ -774,6 +863,7 @@ app.post('/api/billing/checkout', async (req, reply) => {
     return reply.status(503).send({ error: 'Stripe billing is not configured on this server' });
   }
   const body = (req.body ?? {}) as { seats?: number };
+  recordServerConversion('checkout_intent', { githubLogin: auth.login, path: '/app/' });
   const url = await createCheckoutSession(auth.login, body.seats ?? 1);
   if (!url) return reply.status(503).send({ error: 'Could not create checkout session' });
   return { url };
@@ -785,6 +875,25 @@ app.post('/api/billing/portal', async (req, reply) => {
   const url = await createBillingPortalSession(auth.login);
   if (!url) return reply.status(400).send({ error: 'No billing account — subscribe to Team first' });
   return { url };
+});
+
+app.post('/api/partner/studio-billing', async (req, reply) => {
+  const rawBody = (req as { rawBody?: string }).rawBody ?? '';
+  const signature = req.headers['x-studio-billing-signature'] as string | undefined;
+  if (!verifyStudioBillingSignature(rawBody, signature)) {
+    return reply.status(401).send({ error: 'Invalid signature' });
+  }
+  let event: StudioBillingPartnerEvent;
+  try {
+    event = JSON.parse(rawBody) as StudioBillingPartnerEvent;
+  } catch {
+    return reply.status(400).send({ error: 'Invalid JSON' });
+  }
+  const result = handleStudioBillingPartnerEvent(event);
+  if (!result.ok && result.error && result.error !== 'skipped') {
+    return reply.status(result.error.includes('GitHub') ? 404 : 400).send({ error: result.error });
+  }
+  return result;
 });
 
 app.post('/api/billing/webhook', async (req, reply) => {

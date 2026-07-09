@@ -1,4 +1,5 @@
 const API = window.location.origin;
+import { initGrowth, showGrowthView as openGrowthView } from './growth.js';
 
 let currentScan = null;
 let activeFinding = null;
@@ -644,6 +645,7 @@ function hideAllPanels() {
   $('#autofixQueueView').classList.add('hidden');
   $('#scannersView').classList.add('hidden');
   $('#integrationsView').classList.add('hidden');
+  $('#growthView').classList.add('hidden');
   window.AegisModules?.hideModuleViews?.();
   updateOverviewGuideHeaderBtn();
 }
@@ -1094,6 +1096,11 @@ function showIntegrationsView() {
   setActiveNav('navIntegrations');
   setModulePill('code');
   renderIntegrations();
+}
+
+function showGrowthView() {
+  currentView = 'growth';
+  openGrowthView();
 }
 
 async function renderPRScans() {
@@ -2366,6 +2373,11 @@ $('#navIntegrations').addEventListener('click', (e) => {
   showIntegrationsView();
 });
 
+$('#navGrowth').addEventListener('click', (e) => {
+  e.preventDefault();
+  showGrowthView();
+});
+
 $$('.module-pill').forEach((pill) => {
   pill.addEventListener('click', () => {
     const mod = pill.dataset.module;
@@ -2403,7 +2415,9 @@ $('#navDocs').addEventListener('click', (e) => {
 window.aegisApi = api;
 window.aegisToast = toast;
 window.aegisSetPageContext = setPageContext;
+window.aegisSetModulePill = setModulePill;
 window.aegisHideAllPanels = hideAllPanels;
+window.aegisSetActiveNav = setActiveNav;
 window.aegisShowFeedView = showFeedView;
 window.aegisHasCodeScans = () => allScansCache.length > 0;
 window.aegisShowDocsView = showDocsView;
@@ -2411,6 +2425,7 @@ window.aegisIsCodeFeedView = () => currentView === 'feed';
 window.aegisOpenFixGuide = openFixGuidePanel;
 
 initTheme();
+initGrowth();
 window.AegisModules?.bindModuleEvents?.();
 
 loadAuth().then(async () => {
@@ -2488,6 +2503,9 @@ loadAuth().then(async () => {
     refreshHistory();
   } else if (view === 'integrations') {
     showIntegrationsView();
+    refreshHistory();
+  } else if (view === 'growth') {
+    showGrowthView();
     refreshHistory();
   } else if (view === 'findings') {
     await showFindingsView();

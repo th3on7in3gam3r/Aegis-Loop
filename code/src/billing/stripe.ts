@@ -1,11 +1,16 @@
 import Stripe from 'stripe';
 import { config, stripeConfigured } from '../config.js';
 import {
+  emitSubscriptionCanceled,
+  emitSubscriptionUpgraded,
+} from './studioOps.js';
+import {
   findAccountByStripeCustomer,
   findAccountByStripeSubscription,
   getAccount,
   saveAccount,
   setAccountPlan,
+  type Account,
 } from './store.js';
 
 let stripe: Stripe | null = null;
@@ -59,6 +64,30 @@ export async function createBillingPortalSession(login: string): Promise<string 
   return session.url;
 }
 
+function applyPlanChange(
+  login: string,
+  plan: 'team' | 'free',
+  patch: Partial<Pick<Account, 'stripeCustomerId' | 'stripeSubscriptionId' | 'seats'>> = {},
+): void {
+  const account = getAccount(login);
+  const prevPlan = account.plan;
+  setAccountPlan(login, plan, patch);
+
+  if (prevPlan !== 'team' && plan === 'team') {
+    emitSubscriptionUpgraded({
+      githubLogin: login,
+      stripeCustomerId: patch.stripeCustomerId ?? account.stripeCustomerId,
+      stripeSubscriptionId: patch.stripeSubscriptionId ?? account.stripeSubscriptionId,
+    });
+  } else if (prevPlan === 'team' && plan === 'free') {
+    emitSubscriptionCanceled({
+      githubLogin: login,
+      stripeCustomerId: patch.stripeCustomerId ?? account.stripeCustomerId,
+      stripeSubscriptionId: patch.stripeSubscriptionId ?? account.stripeSubscriptionId,
+    });
+  }
+}
+
 export async function handleStripeWebhook(rawBody: string, signature: string): Promise<void> {
   const s = client();
   if (!s || !config.stripe.webhookSecret) throw new Error('Stripe webhook not configured');
@@ -70,7 +99,7 @@ export async function handleStripeWebhook(rawBody: string, signature: string): P
       const session = event.data.object as Stripe.Checkout.Session;
       const login = session.metadata?.githubLogin;
       if (login && session.subscription) {
-        setAccountPlan(login, 'team', {
+        applyPlanChange(login, 'team', {
           stripeCustomerId: session.customer as string,
           stripeSubscriptionId: session.subscription as string,
           seats: session.amount_total ? undefined : 1,
@@ -87,13 +116,13 @@ export async function handleStripeWebhook(rawBody: string, signature: string): P
         findAccountByStripeCustomer(sub.customer as string);
       if (!account) break;
       if (sub.status === 'active' || sub.status === 'trialing') {
-        setAccountPlan(account.login, 'team', {
+        applyPlanChange(account.login, 'team', {
           stripeCustomerId: sub.customer as string,
           stripeSubscriptionId: sub.id,
           seats: sub.items.data[0]?.quantity ?? 1,
         });
       } else if (sub.status === 'canceled' || sub.status === 'unpaid') {
-        setAccountPlan(account.login, 'free', { stripeSubscriptionId: undefined, seats: 1 });
+        applyPlanChange(account.login, 'free', { stripeSubscriptionId: undefined, seats: 1 });
       }
       break;
     }
@@ -103,7 +132,7 @@ export async function handleStripeWebhook(rawBody: string, signature: string): P
         findAccountByStripeSubscription(sub.id) ??
         findAccountByStripeCustomer(sub.customer as string);
       if (account) {
-        setAccountPlan(account.login, 'free', { stripeSubscriptionId: undefined, seats: 1 });
+        applyPlanChange(account.login, 'free', { stripeSubscriptionId: undefined, seats: 1 });
       }
       break;
     }
