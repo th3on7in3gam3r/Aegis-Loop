@@ -251,6 +251,83 @@
     return attackScans;
   }
 
+  function mergeAttackScans(fresh) {
+    for (const scan of fresh) {
+      if (!scan?.id) continue;
+      const idx = attackScans.findIndex((s) => s.id === scan.id);
+      if (idx >= 0) attackScans[idx] = scan;
+      else attackScans.push(scan);
+    }
+    attackScans.sort(
+      (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+    );
+  }
+
+  function focusAttackResultsNav() {
+    $$('#navAttackModule .nav-item').forEach((n) => n.classList.remove('active'));
+    $('#navAttackSurface')?.classList.add('active');
+  }
+
+  function paintAttackView(opts = {}) {
+    const scans = attackScans;
+    const hasData = hasAttackScanData();
+    setModuleDataView('attack', hasData);
+    const latest = scans[0];
+    if (hasData && latest?.status === 'complete') {
+      updateModuleKpis('attackStat', latest);
+      const findings = latest.findings ?? [];
+      renderModuleFindings(
+        $('#attackFindingsList'),
+        findings,
+        attackProbeEmptyMessage(latest),
+        'attack',
+        latest.id
+      );
+      window.aegisSetPageContext?.(
+        'Offensive testing',
+        'Aegis Loop / attack',
+        findings.length
+          ? `${latest.target ?? latest.repo} · ${findings.length} finding(s) · score ${latest.stats?.score ?? '—'}`
+          : `${latest.target ?? latest.repo} · probe passed · score ${latest.stats?.score ?? 100}`
+      );
+    } else if (hasData && latest?.status === 'failed') {
+      renderModuleFindings($('#attackFindingsList'), [], latest.error || 'Probe failed', 'attack', latest.id);
+      window.aegisSetPageContext?.('Offensive testing', 'Aegis Loop / attack', 'Last probe failed — check the URL');
+    } else if (!hasData) {
+      window.aegisSetPageContext?.('Offensive testing', 'Aegis Loop / attack', 'Safe passive probes — no destructive exploits');
+    }
+
+    const hist = $('#attackScanHistory');
+    if (hist) {
+      hist.innerHTML = scans.length
+        ? scans.slice(0, 8).map((s) =>
+            `<li data-id="${escapeHtml(s.id)}">${escapeHtml(s.target ?? s.repo)}<small>${s.stats?.critical ?? 0}c</small></li>`
+          ).join('')
+        : '<li class="scan-history-empty">No probes yet</li>';
+      hist.querySelectorAll('li[data-id]').forEach((li) => {
+        li.addEventListener('click', async () => {
+          const scan = await window.aegisApi(`/api/attack/scans/${li.dataset.id}`);
+          updateModuleKpis('attackStat', scan);
+          const findings = scan.findings ?? [];
+          renderModuleFindings(
+            $('#attackFindingsList'),
+            findings,
+            findings.length ? 'No findings' : attackProbeEmptyMessage(scan),
+            'attack',
+            scan.id
+          );
+        });
+      });
+    }
+
+    if (opts.scrollToResults && hasData) {
+      focusAttackResultsNav();
+      requestAnimationFrame(() => {
+        $('#attackDataWrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }
+
   async function loadProtectData() {
     const data = await window.aegisApi('/api/protect/rules');
     protectRules = data.rules ?? [];
@@ -304,56 +381,23 @@
     }
   }
 
-  async function renderAttackView() {
+  async function renderAttackView(opts = {}) {
     $('#attackView')?.classList.remove('hidden');
     try {
-      const scans = await loadAttackScans();
-      const hasData = hasAttackScanData();
-      setModuleDataView('attack', hasData);
-      const latest = scans[0];
-      if (hasData && latest?.status === 'complete') {
-        updateModuleKpis('attackStat', latest);
-        const findings = latest.findings ?? [];
-        renderModuleFindings(
-          $('#attackFindingsList'),
-          findings,
-          attackProbeEmptyMessage(latest),
-          'attack',
-          latest.id
-        );
-        window.aegisSetPageContext?.(
-          'Offensive testing',
-          'Aegis Loop / attack',
-          findings.length
-            ? `${latest.target ?? latest.repo} · ${findings.length} finding(s) · score ${latest.stats?.score ?? '—'}`
-            : `${latest.target ?? latest.repo} · probe passed · score ${latest.stats?.score ?? 100}`
-        );
-      } else if (hasData && latest?.status === 'failed') {
-        renderModuleFindings($('#attackFindingsList'), [], latest.error || 'Probe failed', 'attack', latest.id);
-        window.aegisSetPageContext?.('Offensive testing', 'Aegis Loop / attack', 'Last probe failed — check the URL');
-      } else if (!hasData) {
-        window.aegisSetPageContext?.('Offensive testing', 'Aegis Loop / attack', 'Safe passive probes — no destructive exploits');
+      if (opts.freshScans?.length) mergeAttackScans(opts.freshScans);
+      if (!opts.skipFetch) {
+        await loadAttackScans();
       }
-      const hist = $('#attackScanHistory');
-      if (hist) {
-        hist.innerHTML = scans.length
-          ? scans.slice(0, 8).map((s) =>
-              `<li data-id="${escapeHtml(s.id)}">${escapeHtml(s.target ?? s.repo)}<small>${s.stats?.critical ?? 0}c</small></li>`
-            ).join('')
-          : '<li class="scan-history-empty">No probes yet</li>';
-        hist.querySelectorAll('li[data-id]').forEach((li) => {
-          li.addEventListener('click', async () => {
-            const scan = await window.aegisApi(`/api/attack/scans/${li.dataset.id}`);
-            updateModuleKpis('attackStat', scan);
-            renderModuleFindings($('#attackFindingsList'), scan.findings ?? [], 'No findings', 'attack', scan.id);
-          });
-        });
-      }
+      paintAttackView(opts);
       await loadProtectData().catch(() => {});
       updateAttackGuideSteps();
       applyGuideVisibility('attack');
     } catch (e) {
-      window.aegisToast?.(e.message || 'Could not load attack scans');
+      if (attackScans.length) {
+        paintAttackView(opts);
+      } else {
+        window.aegisToast?.(e.message || 'Could not load attack scans');
+      }
     }
   }
 
@@ -510,6 +554,14 @@ async function switchModule(moduleId) {
     }
   }
 
+  async function ensureAttackModuleVisible() {
+    if (activeModule !== 'attack') {
+      await switchModule('attack');
+      return;
+    }
+    $('#attackView')?.classList.remove('hidden');
+  }
+
   async function runAttackProbe() {
     const raw = $('#attackTargetInput')?.value.trim();
     if (!raw) return window.aegisToast?.('Enter at least one URL');
@@ -517,14 +569,20 @@ async function switchModule(moduleId) {
     const btn = $('#attackProbeBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'Probing…'; }
     try {
+      await ensureAttackModuleVisible();
       const body = lines.length > 1 ? { targets: lines } : { target: lines[0] };
       const res = await window.aegisApi('/api/attack/scans', {
         method: 'POST',
         body: JSON.stringify(body),
       });
+      const freshScans = (res.scans ?? [res]).filter((s) => s?.id);
+      $('#attackTargetInput').value = '';
       $('#attackProbeModal')?.classList.add('hidden');
-      await renderAttackView();
+      await renderAttackView({ freshScans, skipFetch: true, scrollToResults: true });
       window.aegisToast?.(attackProbeToastMessage(res));
+      loadAttackScans()
+        .then(() => renderAttackView({ skipFetch: true }))
+        .catch(() => {});
     } catch (e) {
       window.aegisToast?.(e.message);
     } finally {
@@ -588,8 +646,9 @@ async function switchModule(moduleId) {
       e.preventDefault();
       $('#cloudScanModal')?.classList.remove('hidden');
     });
-    $('#navAttackProbe')?.addEventListener('click', (e) => {
+    $('#navAttackProbe')?.addEventListener('click', async (e) => {
       e.preventDefault();
+      await ensureAttackModuleVisible();
       $('#attackProbeModal')?.classList.remove('hidden');
     });
     $('#navCloudPosture')?.addEventListener('click', (e) => {
