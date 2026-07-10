@@ -246,6 +246,138 @@
     return cloudScans;
   }
 
+  function mergeCloudScans(fresh) {
+    for (const scan of fresh) {
+      if (!scan?.id) continue;
+      const idx = cloudScans.findIndex((s) => s.id === scan.id);
+      if (idx >= 0) cloudScans[idx] = scan;
+      else cloudScans.push(scan);
+    }
+    cloudScans.sort(
+      (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+    );
+  }
+
+  function cloudScanHistoryItem(scan) {
+    const stats = scan.stats ?? {};
+    const score = stats.score ?? '—';
+    const crit = stats.critical ?? 0;
+    const warn = stats.warning ?? 0;
+    const info = stats.info ?? 0;
+    const when = scan.completedAt ?? scan.startedAt;
+    const dateLabel = when ? new Date(when).toLocaleDateString() : '';
+    return `<li data-id="${escapeHtml(scan.id)}">
+      <span class="module-scan-repo">${escapeHtml(scan.repo)}</span>
+      <span class="module-scan-meta">
+        <span class="module-scan-score">Score ${score}</span>
+        <span>${crit}c · ${warn}h · ${info}i</span>
+        ${dateLabel ? `<span>${escapeHtml(dateLabel)}</span>` : ''}
+      </span>
+    </li>`;
+  }
+
+  function cloudScanEmptyMessage(scan) {
+    const repo = scan?.repo ?? 'repository';
+    const score = scan?.stats?.score ?? 100;
+    return `Scan complete for ${repo} — posture score ${score}. No IaC misconfigurations found in Terraform, Kubernetes, or Docker files.`;
+  }
+
+  function cloudScanToastMessage(scan) {
+    if (scan?.status === 'failed') return `Cloud scan failed: ${scan.error || 'try again'}`;
+    const count = scan.findings?.length ?? 0;
+    const repo = scan.repo ?? 'repository';
+    if (!count) {
+      return `Cloud scan complete — ${repo} scored ${scan.stats?.score ?? 100} (no IaC issues)`;
+    }
+    return `Cloud scan complete — ${count} finding(s) in ${repo}`;
+  }
+
+  function focusCloudPostureNav() {
+    $$('#navCloudModule .nav-item').forEach((n) => n.classList.remove('active'));
+    $('#navCloudPosture')?.classList.add('active');
+  }
+
+  function paintCloudView(opts = {}) {
+    const scans = cloudScans;
+    const hasData = hasCloudScanData();
+    setModuleDataView('cloud', hasData);
+    const latest = scans[0];
+    if (hasData && latest?.status === 'complete') {
+      updateModuleKpis('cloudStat', latest);
+      const findings = latest.findings ?? [];
+      renderModuleFindings(
+        $('#cloudFindingsList'),
+        findings,
+        cloudScanEmptyMessage(latest),
+        'cloud',
+        latest.id
+      );
+      window.aegisSetPageContext?.(
+        'Cloud posture',
+        'Aegis Loop / cloud',
+        findings.length
+          ? `${latest.repo} · ${findings.length} finding(s) · score ${latest.stats?.score ?? '—'}`
+          : `${latest.repo} · scan passed · score ${latest.stats?.score ?? 100}`
+      );
+    } else if (hasData && latest?.status === 'failed') {
+      renderModuleFindings($('#cloudFindingsList'), [], latest.error || 'Cloud scan failed', 'cloud', latest.id);
+      window.aegisSetPageContext?.('Cloud posture', 'Aegis Loop / cloud', 'Last scan failed — try again');
+    } else if (!hasData) {
+      window.aegisSetPageContext?.('Cloud posture', 'Aegis Loop / cloud', 'Scan IaC for public buckets, open security groups, and more');
+    }
+
+    const hist = $('#cloudScanHistory');
+    if (hist) {
+      hist.innerHTML = scans.length
+        ? scans.slice(0, 8).map((s) => cloudScanHistoryItem(s)).join('')
+        : '<li class="scan-history-empty">No cloud scans yet — run a demo or scan your IaC repo</li>';
+      hist.querySelectorAll('li[data-id]').forEach((li) => {
+        li.addEventListener('click', async () => {
+          const scan = await window.aegisApi(`/api/cloud/scans/${li.dataset.id}`);
+          updateModuleKpis('cloudStat', scan);
+          const findings = scan.findings ?? [];
+          renderModuleFindings(
+            $('#cloudFindingsList'),
+            findings,
+            findings.length ? 'No findings' : cloudScanEmptyMessage(scan),
+            'cloud',
+            scan.id
+          );
+        });
+      });
+    }
+
+    if (opts.scrollToResults && hasData) {
+      focusCloudPostureNav();
+      requestAnimationFrame(() => {
+        $('#cloudDataWrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }
+
+  async function renderCloudView(opts = {}) {
+    $('#cloudView')?.classList.remove('hidden');
+    $('#overviewCharts')?.classList.add('hidden');
+    $('#overviewGuideWrap')?.classList.add('hidden');
+    try {
+      if (opts.freshScans?.length) mergeCloudScans(opts.freshScans);
+      if (!opts.skipFetch) {
+        await loadCloudScans();
+      }
+      paintCloudView(opts);
+      await loadProtectData().catch(() => {});
+      updateCloudGuideSteps();
+      applyGuideVisibility('cloud');
+      updateCloudDemoUi();
+    } catch (e) {
+      if (cloudScans.length) {
+        paintCloudView(opts);
+      } else {
+        window.aegisToast?.(e.message || 'Could not load cloud scans');
+      }
+    }
+  }
+
   async function loadAttackScans() {
     attackScans = await window.aegisApi('/api/attack/scans');
     return attackScans;
@@ -336,53 +468,10 @@
     return data;
   }
 
-  async function renderCloudView() {
-    $('#cloudView')?.classList.remove('hidden');
-    try {
-      const scans = await loadCloudScans();
-      const hasData = hasCloudScanData();
-      setModuleDataView('cloud', hasData);
-      const latest = scans[0];
-      if (hasData && latest?.status === 'complete') {
-        updateModuleKpis('cloudStat', latest);
-        renderModuleFindings($('#cloudFindingsList'), latest.findings ?? [], 'No misconfigurations found', 'cloud', latest.id);
-        window.aegisSetPageContext?.(
-          'Cloud posture',
-          'Aegis Loop / cloud',
-          `${latest.repo} · ${latest.findings?.length ?? 0} finding(s) · score ${latest.stats?.score ?? '—'}`
-        );
-      } else if (hasData && latest?.status === 'failed') {
-        renderModuleFindings($('#cloudFindingsList'), [], latest.error || 'Cloud scan failed', 'cloud', latest.id);
-        window.aegisSetPageContext?.('Cloud posture', 'Aegis Loop / cloud', 'Last scan failed — try again');
-      } else if (!hasData) {
-        window.aegisSetPageContext?.('Cloud posture', 'Aegis Loop / cloud', 'Scan IaC for public buckets, open security groups, and more');
-      }
-      await loadProtectData().catch(() => {});
-      updateCloudGuideSteps();
-      applyGuideVisibility('cloud');
-      updateCloudDemoUi();
-      const hist = $('#cloudScanHistory');
-      if (hist) {
-        hist.innerHTML = scans.length
-          ? scans.slice(0, 8).map((s) =>
-              `<li data-id="${escapeHtml(s.id)}">${escapeHtml(s.repo)}<small>${s.stats?.critical ?? 0}c · ${s.stats?.warning ?? 0}h</small></li>`
-            ).join('')
-          : '<li class="scan-history-empty">No cloud scans yet</li>';
-        hist.querySelectorAll('li[data-id]').forEach((li) => {
-          li.addEventListener('click', async () => {
-            const scan = await window.aegisApi(`/api/cloud/scans/${li.dataset.id}`);
-            updateModuleKpis('cloudStat', scan);
-            renderModuleFindings($('#cloudFindingsList'), scan.findings ?? [], 'No findings', 'cloud', scan.id);
-          });
-        });
-      }
-    } catch (e) {
-      window.aegisToast?.(e.message || 'Could not load cloud scans');
-    }
-  }
-
   async function renderAttackView(opts = {}) {
     $('#attackView')?.classList.remove('hidden');
+    $('#overviewCharts')?.classList.add('hidden');
+    $('#overviewGuideWrap')?.classList.add('hidden');
     try {
       if (opts.freshScans?.length) mergeAttackScans(opts.freshScans);
       if (!opts.skipFetch) {
@@ -403,6 +492,8 @@
 
   async function renderProtectView() {
     $('#protectView')?.classList.remove('hidden');
+    $('#overviewCharts')?.classList.add('hidden');
+    $('#overviewGuideWrap')?.classList.add('hidden');
     try {
       const data = await loadProtectData();
       const hasData = hasProtectData();
@@ -535,13 +626,25 @@ async function switchModule(moduleId) {
     updateShowGuideButtons();
   }
 
+  async function ensureCloudModuleVisible() {
+    if (activeModule !== 'cloud') {
+      await switchModule('cloud');
+      return;
+    }
+    $('#cloudView')?.classList.remove('hidden');
+  }
+
   async function runCloudDemo() {
     const btn = $('#cloudDemoBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'Scanning…'; }
     try {
-      await window.aegisApi('/api/cloud/scans/demo', { method: 'POST' });
-      await renderCloudView();
-      window.aegisToast?.('Cloud demo scan complete');
+      await ensureCloudModuleVisible();
+      const scan = await window.aegisApi('/api/cloud/scans/demo', { method: 'POST' });
+      await renderCloudView({ freshScans: [scan], skipFetch: true, scrollToResults: true });
+      window.aegisToast?.(cloudScanToastMessage(scan));
+      loadCloudScans()
+        .then(() => renderCloudView({ skipFetch: true }))
+        .catch(() => {});
     } catch (e) {
       window.aegisToast?.(e.message);
     } finally {
@@ -553,19 +656,29 @@ async function switchModule(moduleId) {
     const repo = $('#cloudRepoInput')?.value.trim();
     if (!repo) return window.aegisToast?.('Enter a repository');
     const btn = $('#cloudScanBtn');
-    if (btn) btn.disabled = true;
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Scanning…';
+    }
     try {
-      await window.aegisApi('/api/cloud/scans', {
+      await ensureCloudModuleVisible();
+      const scan = await window.aegisApi('/api/cloud/scans', {
         method: 'POST',
         body: JSON.stringify({ repo, branch: $('#cloudBranchInput')?.value.trim() || 'main' }),
       });
       $('#cloudScanModal')?.classList.add('hidden');
-      await renderCloudView();
-      window.aegisToast?.('Cloud scan complete');
+      await renderCloudView({ freshScans: [scan], skipFetch: true, scrollToResults: true });
+      window.aegisToast?.(cloudScanToastMessage(scan));
+      loadCloudScans()
+        .then(() => renderCloudView({ skipFetch: true }))
+        .catch(() => {});
     } catch (e) {
       window.aegisToast?.(e.message);
     } finally {
-      if (btn) btn.disabled = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Start cloud scan';
+      }
     }
   }
 

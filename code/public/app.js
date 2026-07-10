@@ -760,12 +760,18 @@ function computeOverviewMetrics() {
   };
 }
 
+function isCodeOverviewActive() {
+  const codeNav = !$('#navCodeModule')?.classList.contains('hidden');
+  const codeModule = (window.AegisModules?.getActiveModule?.() ?? 'code') === 'code';
+  return currentView === 'feed' && codeNav && codeModule;
+}
+
 function renderOverviewCharts() {
   const section = $('#overviewCharts');
   if (!section) return;
 
   const m = computeOverviewMetrics();
-  if (!m.hasData) {
+  if (!isCodeOverviewActive() || !m.hasData) {
     section.classList.add('hidden');
     return;
   }
@@ -2260,12 +2266,14 @@ async function refreshHistory() {
     }
     await loadRepoScanMap();
     updateSidebarStats();
-    if (currentView === 'feed') {
+    if (isCodeOverviewActive()) {
       renderOverviewCharts();
       updateOverviewGuideSteps();
       window.AegisModules?.applyGuideVisibility?.('overview');
+      $('#overviewGuideWrap')?.classList.remove('hidden');
     } else {
-      $('#overviewCharts').classList.add('hidden');
+      $('#overviewCharts')?.classList.add('hidden');
+      $('#overviewGuideWrap')?.classList.add('hidden');
     }
     renderHomeChecklist();
     updateDemoUi();
