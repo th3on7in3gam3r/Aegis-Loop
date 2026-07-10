@@ -51,7 +51,7 @@ export function handleStudioBillingPartnerEvent(
 
   const login = event.linkedIds.aegisGithubLogin?.trim();
   if (!login) {
-    return { ok: false, error: 'No GitHub login — link Aegis in AI CMO Studio settings' };
+    return { ok: false, error: 'No GitHub login — link Aegis in Cadence Studio settings' };
   }
 
   getAccount(login);

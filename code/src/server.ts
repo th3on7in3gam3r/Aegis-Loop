@@ -220,7 +220,7 @@ app.get('/llms.txt', async (_req, reply) => {
   return reply.type('text/plain; charset=utf-8').send(llmsTxt(base));
 });
 
-/** Partner API — marketer-safe URL header probe (growth stack / AI-CMO). */
+/** Partner API — marketer-safe URL header probe (growth stack / Cadence). */
 app.get('/api/v1/url-check', async (req, reply) => {
   if (!urlCheckRateOk(req.ip || 'unknown')) return rateLimited(reply);
   const url = (req.query as { url?: string }).url?.trim();
