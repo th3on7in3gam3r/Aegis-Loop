@@ -295,79 +295,6 @@
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
   .hero-proof span { font-size: 13px; color: var(--text-muted); }
 
-  /* ── Hero loop canvas ── */
-  .hero-visual {
-    position: relative;
-    padding-top: 188px;
-  }
-  .hero-visual::before {
-    content: '';
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 92%;
-    height: 200px;
-    background: radial-gradient(ellipse 80% 70% at 50% 50%, rgba(124,58,237,0.14), transparent 72%);
-    pointer-events: none;
-    z-index: 0;
-  }
-  .hero-loop {
-    position: absolute;
-    top: 0;
-    left: -10%;
-    right: -10%;
-    height: 300px;
-    overflow: visible;
-    pointer-events: none;
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    border-radius: 0;
-    z-index: 1;
-    mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 96%);
-    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 96%);
-  }
-  .hero-loop-placeholder,
-  .hero-loop-canvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-  .hero-loop-placeholder {
-    transition: opacity 0.9s var(--ease-out);
-  }
-  .hero-loop-canvas {
-    opacity: 0;
-    transition: opacity 0.9s var(--ease-out);
-  }
-  .hero-loop.is-live .hero-loop-placeholder {
-    opacity: 0;
-    pointer-events: none;
-  }
-  .hero-loop.is-live .hero-loop-canvas { opacity: 1; }
-  .hero-loop.is-static .hero-loop-canvas { display: none; }
-  .hero-visual .dashboard {
-    position: relative;
-    z-index: 2;
-    margin-top: -28px;
-  }
-  @media (max-width: 1023px) {
-    .hero-visual { padding-top: 0; }
-    .hero-loop {
-      position: relative;
-      left: 0;
-      right: 0;
-      height: 200px;
-      margin-bottom: 16px;
-      mask-image: linear-gradient(to bottom, #000 0%, #000 70%, transparent 100%);
-      -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 70%, transparent 100%);
-      pointer-events: auto;
-    }
-  }
-
   /* ── Dashboard ── */
   .dashboard {
     background: var(--bg-elevated);
@@ -1247,38 +1174,7 @@
         </div>
       </div>
 
-      <div class="hero-visual reveal reveal-d2">
-        <div class="hero-loop" id="heroLoop" aria-hidden="true">
-          <svg class="hero-loop-placeholder" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <radialGradient id="heroShieldGlow" cx="50%" cy="46%" r="42%">
-                <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.18"/>
-                <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
-              </radialGradient>
-              <linearGradient id="heroShieldFill" x1="186" y1="96" x2="214" y2="132">
-                <stop stop-color="#7c3aed"/>
-                <stop offset="1" stop-color="#5b21b6"/>
-              </linearGradient>
-            </defs>
-            <circle cx="200" cy="118" r="88" fill="url(#heroShieldGlow)"/>
-            <circle cx="200" cy="118" r="68" fill="none" stroke="rgba(124,58,237,0.1)" stroke-width="1"/>
-            <circle cx="200" cy="118" r="44" fill="none" stroke="rgba(124,58,237,0.08)" stroke-width="1"/>
-            <path d="M200 104 L190 109 v6 c0 4.6 3 7.5 10 8.6 7-1.1 10-4 10-8.6 v-6 l-10-5z" fill="url(#heroShieldFill)" fill-opacity="0.2" stroke="rgba(139,92,246,0.55)" stroke-width="1.4"/>
-            <path d="M196 116 a6 6 0 1 1 10 2" fill="none" stroke="rgba(139,92,246,0.7)" stroke-width="1.6" stroke-linecap="round"/>
-            <g stroke="rgba(139,92,246,0.22)" stroke-width="1.1" fill="none">
-              <path d="M200 118 Q168 72 128 84"/><path d="M200 118 Q248 68 292 90"/>
-              <path d="M200 118 Q308 118 316 152"/><path d="M200 118 Q252 168 296 182"/>
-              <path d="M200 118 Q148 168 104 182"/><path d="M200 118 Q92 124 84 118"/>
-              <path d="M200 118 Q148 68 104 84"/>
-            </g>
-            <g fill="rgba(139,92,246,0.5)">
-              <circle cx="128" cy="84" r="3.5"/><circle cx="292" cy="90" r="3.5"/><circle cx="316" cy="152" r="3.5"/>
-              <circle cx="296" cy="182" r="3.5"/><circle cx="104" cy="182" r="3.5"/><circle cx="84" cy="118" r="3.5"/>
-              <circle cx="104" cy="84" r="3.5"/>
-            </g>
-          </svg>
-          <canvas class="hero-loop-canvas"></canvas>
-        </div>
+      <div class="reveal reveal-d2">
         <div class="dashboard" id="heroDash">
           <div class="dash-bar">
             <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
@@ -1975,7 +1871,6 @@
 </footer>
 
 <script src="/assets/cookie-consent.js"></script>
-<script src="/assets/hero-loop.js" defer></script>
 <script>
   // Sticky header
   const header = document.getElementById('header');
