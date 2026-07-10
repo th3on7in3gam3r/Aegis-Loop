@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CODE_ROOT = join(__dirname, '..', '..');
-const DEFAULT_API_URL = 'https://aegis-loop.onrender.com';
+const DEFAULT_API_URL = 'https://aegis-loop.com';
 
 const args = process.argv.slice(2);
 const command = args[0] ?? 'help';

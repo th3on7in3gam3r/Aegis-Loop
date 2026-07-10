@@ -17,7 +17,7 @@ for (const f of scan.findings) {
 if (scan.findings.length === 0) {
   console.log('  No findings — nice work.\n');
 } else {
-  console.log(`\nOpen ${process.env.AEGIS_API_URL ?? 'https://aegis-loop.onrender.com'}/app for A-Fix and PR integration.\n`);
+  console.log(`\nOpen ${process.env.AEGIS_API_URL ?? 'https://aegis-loop.com'}/app for A-Fix and PR integration.\n`);
 }
 
 process.exit(scan.stats.critical > 0 ? 1 : 0);

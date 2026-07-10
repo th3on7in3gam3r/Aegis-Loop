@@ -113,7 +113,7 @@ npx aegis init</code></pre>
       <p>In your repo on GitHub: <strong>Settings → Secrets and variables → Actions → New repository secret</strong></p>
       <ul>
         <li><code>AEGIS_API_KEY</code> — the key you just created</li>
-        <li><code>AEGIS_API_URL</code> — optional; defaults to <code>https://aegis-loop.onrender.com</code>. Set this if you self-host Aegis Loop.</li>
+        <li><code>AEGIS_API_URL</code> — optional; defaults to <code>https://aegis-loop.com</code>. Set this if you self-host Aegis Loop.</li>
       </ul>
       <h4 style="margin:16px 0 8px;font-size:13px">4 — Open a pull request</h4>
       <p>The workflow posts to <code>POST /api/ci/scan</code> with your repo name and PR number. Results appear in this dashboard under your account. Free plan: up to 3 repos; Team: unlimited.</p>

@@ -42,7 +42,7 @@ export async function summarizeUrlCheck(targetInput: string): Promise<UrlCheckSu
       csp: false,
       findingCount: { critical: 0, warning: 0, info: 0 },
       findings: [],
-      reportUrl: 'https://aegis-loop.onrender.com/',
+      reportUrl: 'https://aegis-loop.com/',
       marketerNote:
         'This is a lightweight header check for marketers. Developers should use Aegis Loop for full repo and PR scanning.',
     };
@@ -66,7 +66,7 @@ export async function summarizeUrlCheck(targetInput: string): Promise<UrlCheckSu
       title: f.title,
       message: f.message,
     })),
-    reportUrl: 'https://aegis-loop.onrender.com/',
+    reportUrl: 'https://aegis-loop.com/',
     marketerNote:
       'Surface check only — no exploitation. Connect GitHub in Aegis Loop for code, cloud IaC, and autofix PRs.',
   };
