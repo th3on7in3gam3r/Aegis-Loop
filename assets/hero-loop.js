@@ -62,8 +62,8 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const cx = w * 0.5;
-    const cy = h * 0.48;
-    const radius = Math.min(w, h) * 0.34;
+    const cy = h * 0.36;
+    const radius = Math.min(w, h) * 0.38;
     const count = LABELS.length;
 
     nodes.length = 0;
@@ -99,13 +99,13 @@
   function center() {
     const parallaxX = (mouseX - 0.5) * 12;
     const parallaxY = (mouseY - 0.5) * 10;
-    return { x: w * 0.5 + parallaxX, y: h * 0.48 + parallaxY };
+    return { x: w * 0.5 + parallaxX, y: h * 0.36 + parallaxY };
   }
 
   function drawGrid(cx, cy, maxR) {
-    ctx.strokeStyle = rgba(C.ink, 0.06);
+    ctx.strokeStyle = rgba(C.violet, 0.1);
     ctx.lineWidth = 1;
-    for (let r = maxR * 0.35; r <= maxR; r += maxR * 0.22) {
+    for (let r = maxR * 0.32; r <= maxR; r += maxR * 0.2) {
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.stroke();
@@ -119,8 +119,8 @@
     ctx.rotate(angle);
     const g = ctx.createLinearGradient(0, 0, maxR, 0);
     g.addColorStop(0, rgba(C.violetLight, 0));
-    g.addColorStop(0.65, rgba(C.violetLight, 0.06));
-    g.addColorStop(1, rgba(C.violetLight, 0.14));
+    g.addColorStop(0.65, rgba(C.violetLight, 0.1));
+    g.addColorStop(1, rgba(C.violetLight, 0.22));
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.moveTo(0, 0);
@@ -144,11 +144,11 @@
     ctx.quadraticCurveTo(mx, my, x2, y2);
 
     const grad = ctx.createLinearGradient(x1, y1, x2, y2);
-    grad.addColorStop(0, rgba(C.violetLight, 0.04));
-    grad.addColorStop(0.5, rgba(C.violetLight, 0.32));
-    grad.addColorStop(1, rgba(C.violet, 0.06));
+    grad.addColorStop(0, rgba(C.violetLight, 0.1));
+    grad.addColorStop(0.5, rgba(C.violetLight, 0.48));
+    grad.addColorStop(1, rgba(C.violet, 0.12));
     ctx.strokeStyle = grad;
-    ctx.lineWidth = 1.4;
+    ctx.lineWidth = 1.6;
     ctx.setLineDash([5, 9]);
     ctx.lineDashOffset = -t * 0.035;
     ctx.stroke();
@@ -156,8 +156,8 @@
 
     const dot = quadPoint(x1, y1, mx, my, x2, y2, progress % 1);
     ctx.beginPath();
-    ctx.arc(dot.x, dot.y, 2.5, 0, Math.PI * 2);
-    ctx.fillStyle = rgba(C.violetLight, 0.85);
+    ctx.arc(dot.x, dot.y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = rgba(C.violetLight, 0.95);
     ctx.fill();
   }
 
@@ -166,8 +166,8 @@
     const s = scale * pulse;
 
     const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 2);
-    glow.addColorStop(0, rgba(C.violet, 0.2));
-    glow.addColorStop(0.55, rgba(C.violetLight, 0.07));
+    glow.addColorStop(0, rgba(C.violet, 0.32));
+    glow.addColorStop(0.55, rgba(C.violetLight, 0.12));
     glow.addColorStop(1, rgba(C.violet, 0));
     ctx.fillStyle = glow;
     ctx.beginPath();
@@ -186,8 +186,8 @@
     ctx.bezierCurveTo(5.7, 10.5, 10, 6.5, 10, 0);
     ctx.lineTo(10, -7);
     ctx.closePath();
-    ctx.fillStyle = rgba(C.violet, 0.16);
-    ctx.strokeStyle = rgba(C.violetLight, 0.55);
+    ctx.fillStyle = rgba(C.violet, 0.22);
+    ctx.strokeStyle = rgba(C.violetLight, 0.7);
     ctx.lineWidth = 1.2;
     ctx.fill();
     ctx.stroke();
@@ -218,24 +218,24 @@
         else rgb = C.green;
       }
 
-      const baseR = 4.5 + Math.sin(t * 0.028 + n.pulse) * 1.2;
+      const baseR = 5 + Math.sin(t * 0.028 + n.pulse) * 1.4;
       const glowR = baseR + n.flash * 7;
 
       ctx.beginPath();
       ctx.arc(n.x, n.y, glowR, 0, Math.PI * 2);
-      ctx.fillStyle = rgba(rgb, 0.12 + n.flash * 0.28);
+      ctx.fillStyle = rgba(rgb, 0.2 + n.flash * 0.32);
       ctx.fill();
 
       ctx.beginPath();
       ctx.arc(n.x, n.y, baseR, 0, Math.PI * 2);
-      ctx.fillStyle = rgba(rgb, 0.55 + n.flash * 0.35);
+      ctx.fillStyle = rgba(rgb, 0.72 + n.flash * 0.28);
       ctx.fill();
       ctx.strokeStyle = rgba(rgb, 0.75);
       ctx.lineWidth = 1.2;
       ctx.stroke();
 
-      ctx.font = '500 10px "IBM Plex Mono", monospace';
-      ctx.fillStyle = rgba(C.ink, 0.42);
+      ctx.font = '600 11px "IBM Plex Mono", monospace';
+      ctx.fillStyle = rgba(C.violet, 0.62);
       ctx.textAlign = 'center';
       ctx.fillText(n.label, n.x, n.y + 17);
     });
@@ -257,7 +257,7 @@
       drawArc(a.from, a.to, a.progress);
     });
 
-    drawShield(cx, cy, 42);
+    drawShield(cx, cy, 48);
     drawNodes();
 
     rafId = requestAnimationFrame(frame);
@@ -271,6 +271,7 @@
   function start() {
     if (running) return;
     layout();
+    if (w < 2 || h < 2) return;
     running = true;
     fadeToCanvas();
     cancelAnimationFrame(rafId);
@@ -289,6 +290,20 @@
     { threshold: 0.12, rootMargin: '40px' },
   );
   io.observe(root);
+
+  const revealParent = root.closest('.reveal');
+  if (revealParent) {
+    const onReveal = () => {
+      if (revealParent.classList.contains('in')) start();
+    };
+    onReveal();
+    new MutationObserver(onReveal).observe(revealParent, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+  } else {
+    start();
+  }
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) stop();

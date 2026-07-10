@@ -298,22 +298,35 @@
   /* ── Hero loop canvas ── */
   .hero-visual {
     position: relative;
-    padding-top: 132px;
+    padding-top: 188px;
+  }
+  .hero-visual::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 92%;
+    height: 200px;
+    background: radial-gradient(ellipse 80% 70% at 50% 50%, rgba(124,58,237,0.14), transparent 72%);
+    pointer-events: none;
+    z-index: 0;
   }
   .hero-loop {
     position: absolute;
     top: 0;
-    left: -8%;
-    right: -8%;
-    height: 260px;
+    left: -10%;
+    right: -10%;
+    height: 300px;
     overflow: visible;
     pointer-events: none;
     background: transparent;
     border: none;
     box-shadow: none;
     border-radius: 0;
-    mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 92%);
-    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 92%);
+    z-index: 1;
+    mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 96%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 96%);
   }
   .hero-loop-placeholder,
   .hero-loop-canvas {
@@ -339,7 +352,7 @@
   .hero-visual .dashboard {
     position: relative;
     z-index: 2;
-    margin-top: 0;
+    margin-top: -28px;
   }
   @media (max-width: 1023px) {
     .hero-visual { padding-top: 0; }
