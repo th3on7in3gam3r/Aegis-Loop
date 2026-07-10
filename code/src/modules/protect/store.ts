@@ -83,11 +83,11 @@ export function setProtectRuleEnabled(id: string, enabled: boolean): ProtectRule
   return rule;
 }
 
-export function syncProtectRulesFromScans(): ProtectRule[] {
+export function syncProtectRulesFromScans(userLogin?: string): ProtectRule[] {
   const existing = new Map(rules.map((r) => [r.id, r]));
   const merged: ProtectRule[] = [...BUILTIN_RULES.map((b) => existing.get(b.id) ?? { ...b })];
 
-  for (const scan of listScans()) {
+  for (const scan of listScans(undefined, userLogin)) {
     if (scan.status !== 'complete') continue;
     for (const finding of scan.findings) {
       if (finding.fixed) continue;

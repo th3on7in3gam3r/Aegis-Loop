@@ -4,6 +4,10 @@
   const $$ = (sel) => document.querySelectorAll(sel);
 
   let activeModule = 'code';
+
+  function setActiveModule(moduleId) {
+    activeModule = moduleId;
+  }
   let cloudScans = [];
   let attackScans = [];
   let protectRules = [];
@@ -129,12 +133,6 @@
     return true;
   }
 
-  function cloudScanEmptyMsg() {
-    return shouldShowCloudDemo()
-      ? 'Run a demo or scan a repo for Terraform, K8s, and Docker misconfigs'
-      : 'Scan repository IaC for Terraform, K8s, and Docker misconfigs';
-  }
-
   function updateCloudDemoUi() {
     const show = shouldShowCloudDemo();
     const demoBtn = $('#cloudDemoBtn');
@@ -199,7 +197,22 @@
     </li>`;
   }
 
-  function renderModuleFindings(tbody, findings, emptyMsg, module, scanId, emptyVariant = 'empty') {
+  function cloudPageSubtitle(scan) {
+    const findings = scan.findings ?? [];
+    return findings.length
+      ? `${scan.repo} · ${findings.length} finding(s) · score ${scan.stats?.score ?? '—'}`
+      : `${scan.repo} · scan passed · score ${scan.stats?.score ?? 100}`;
+  }
+
+  function attackPageSubtitle(scan) {
+    const findings = scan.findings ?? [];
+    const label = scan.target ?? scan.repo ?? 'target';
+    return findings.length
+      ? `${label} · ${findings.length} finding(s) · score ${scan.stats?.score ?? '—'}`
+      : `${label} · probe passed · score ${scan.stats?.score ?? 100}`;
+  }
+
+  function renderModuleFindings(tbody, findings, emptyMsg, module, scanId, emptyVariant = 'empty', scan = null) {
     if (!tbody) return;
     tbody.innerHTML = '';
     if (!findings.length) {
@@ -228,9 +241,12 @@
       const guideBtn = module && scanId
         ? `<button type="button" class="btn-sm-outline fix-guide-btn" data-id="${escapeHtml(f.id)}" data-scan="${escapeHtml(scanId)}" data-module="${module}">Fix guide</button>`
         : '';
+      const location = module === 'attack' && scan
+        ? escapeHtml(scan.target ?? scan.repo ?? f.file)
+        : `${escapeHtml(f.file)}${f.line ? `:${f.line}` : ''}`;
       tr.innerHTML = `
         <td><strong>${escapeHtml(f.title)}</strong><br><small style="color:var(--text-3)">${escapeHtml(f.message)}</small></td>
-        <td><span class="branch-tag">${escapeHtml(f.file)}${f.line ? `:${f.line}` : ''}</span></td>
+        <td><span class="branch-tag">${location}</span></td>
         <td><span class="sev-badge ${sevClass(f.severity)}">${sevLabel(f.severity)}</span></td>
         <td><span class="branch-tag">${escapeHtml(f.ruleId)}</span></td>
         <td>${guideBtn}</td>`;
@@ -312,6 +328,11 @@
     return `Cloud scan complete — ${count} finding(s) in ${repo}`;
   }
 
+  function focusProtectEventsNav() {
+    $$('#navProtectModule .nav-item').forEach((n) => n.classList.remove('active'));
+    $('#navProtectEvents')?.classList.add('active');
+  }
+
   function focusCloudPostureNav() {
     $$('#navCloudModule .nav-item').forEach((n) => n.classList.remove('active'));
     $('#navCloudPosture')?.classList.add('active');
@@ -331,14 +352,13 @@
         cloudScanEmptyMessage(latest),
         'cloud',
         latest.id,
-        findings.length ? 'empty' : 'pass'
+        findings.length ? 'empty' : 'pass',
+        latest
       );
       window.aegisSetPageContext?.(
         'Cloud posture',
         'Aegis Loop / cloud',
-        findings.length
-          ? `${latest.repo} · ${findings.length} finding(s) · score ${latest.stats?.score ?? '—'}`
-          : `${latest.repo} · scan passed · score ${latest.stats?.score ?? 100}`
+        cloudPageSubtitle(latest)
       );
     } else if (hasData && latest?.status === 'failed') {
       renderModuleFindings(
@@ -370,8 +390,10 @@
             findings.length ? 'No findings' : cloudScanEmptyMessage(scan),
             'cloud',
             scan.id,
-            findings.length ? 'empty' : 'pass'
+            findings.length ? 'empty' : 'pass',
+            scan
           );
+          window.aegisSetPageContext?.('Cloud posture', 'Aegis Loop / cloud', cloudPageSubtitle(scan));
         });
       });
     }
@@ -402,6 +424,7 @@
       if (cloudScans.length) {
         paintCloudView(opts);
       } else {
+        setModuleDataView('cloud', false);
         window.aegisToast?.(e.message || 'Could not load cloud scans');
       }
     }
@@ -443,14 +466,13 @@
         attackProbeEmptyMessage(latest),
         'attack',
         latest.id,
-        findings.length ? 'empty' : 'pass'
+        findings.length ? 'empty' : 'pass',
+        latest
       );
       window.aegisSetPageContext?.(
         'Offensive testing',
         'Aegis Loop / attack',
-        findings.length
-          ? `${latest.target ?? latest.repo} · ${findings.length} finding(s) · score ${latest.stats?.score ?? '—'}`
-          : `${latest.target ?? latest.repo} · probe passed · score ${latest.stats?.score ?? 100}`
+        attackPageSubtitle(latest)
       );
     } else if (hasData && latest?.status === 'failed') {
       renderModuleFindings(
@@ -482,8 +504,10 @@
             findings.length ? 'No findings' : attackProbeEmptyMessage(scan),
             'attack',
             scan.id,
-            findings.length ? 'empty' : 'pass'
+            findings.length ? 'empty' : 'pass',
+            scan
           );
+          window.aegisSetPageContext?.('Offensive testing', 'Aegis Loop / attack', attackPageSubtitle(scan));
         });
       });
     }
@@ -521,6 +545,7 @@
       if (attackScans.length) {
         paintAttackView(opts);
       } else {
+        setModuleDataView('attack', false);
         window.aegisToast?.(e.message || 'Could not load attack scans');
       }
     }
@@ -607,6 +632,11 @@
       updateProtectGuideSteps();
       applyGuideVisibility('protect');
     } catch (e) {
+      setModuleDataView('protect', false);
+      const rulesBody = $('#protectRulesList');
+      if (rulesBody) {
+        rulesBody.innerHTML = `<tr><td colspan="5" class="module-result-error"><div class="module-result-state"><span class="module-result-icon" aria-hidden="true">!</span><div><strong>Could not load rules</strong><p>${escapeHtml(e.message || 'Try again in a moment')}</p></div></div></td></tr>`;
+      }
       window.aegisToast?.(e.message || 'Could not load protect rules');
     }
   }
@@ -641,6 +671,7 @@ async function switchModule(moduleId) {
     window.aegisHideAllPanels?.();
 
     if (moduleId === 'code') {
+      setActiveModule('code');
       window.aegisShowFeedView?.();
       updateShowGuideButtons();
       return;
@@ -669,6 +700,16 @@ async function switchModule(moduleId) {
       return;
     }
     $('#cloudView')?.classList.remove('hidden');
+  }
+
+  async function openCloudScanModal() {
+    await ensureCloudModuleVisible();
+    $('#cloudScanModal')?.classList.remove('hidden');
+  }
+
+  async function openAttackProbeModal() {
+    await ensureAttackModuleVisible();
+    $('#attackProbeModal')?.classList.remove('hidden');
   }
 
   async function runCloudDemo() {
@@ -731,11 +772,15 @@ async function switchModule(moduleId) {
     const raw = $('#attackTargetInput')?.value.trim();
     if (!raw) return window.aegisToast?.('Enter at least one URL');
     const lines = raw.split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
+    if (lines.length > 20) {
+      window.aegisToast?.('Only the first 20 URLs are probed — extra URLs were ignored');
+    }
+    const targets = lines.slice(0, 20);
     const btn = $('#attackProbeBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'Probing…'; }
     try {
       await ensureAttackModuleVisible();
-      const body = lines.length > 1 ? { targets: lines } : { target: lines[0] };
+      const body = targets.length > 1 ? { targets } : { target: targets[0] };
       const res = await window.aegisApi('/api/attack/scans', {
         method: 'POST',
         body: JSON.stringify(body),
@@ -830,6 +875,7 @@ async function switchModule(moduleId) {
     });
     $('#navProtectEvents')?.addEventListener('click', (e) => {
       e.preventDefault();
+      focusProtectEventsNav();
       renderProtectView();
       document.getElementById('protectEventsList')?.scrollIntoView({ behavior: 'smooth' });
     });
@@ -868,6 +914,7 @@ async function switchModule(moduleId) {
 
   window.AegisModules = {
     switchModule,
+    setActiveModule,
     getActiveModule: () => activeModule,
     hideModuleViews,
     bindModuleEvents,
@@ -876,5 +923,8 @@ async function switchModule(moduleId) {
     revealGuide,
     updateShowGuideButtons,
     updateCloudDemoUi,
+    openCloudScanModal,
+    openAttackProbeModal,
+    syncProtectRules,
   };
 })();

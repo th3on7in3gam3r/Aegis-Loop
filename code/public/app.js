@@ -1036,6 +1036,7 @@ async function loadWorkspaceFindings() {
 async function showFindingsView(opts = {}) {
   const repoFilter = typeof opts.repoFilter === 'string' ? opts.repoFilter.trim() : '';
   currentView = 'findings';
+  window.AegisModules?.setActiveModule?.('code');
   hideAllPanels();
   setActiveNav('navFindings');
   setModulePill('code');
@@ -1115,6 +1116,7 @@ async function showFindingsView(opts = {}) {
 
 function showPRView() {
   currentView = 'pr';
+  window.AegisModules?.setActiveModule?.('code');
   hideAllPanels();
   $('#prView').classList.remove('hidden');
   setPageContext(
@@ -1130,6 +1132,7 @@ function showPRView() {
 
 function showAutofixQueueView() {
   currentView = 'autofix';
+  window.AegisModules?.setActiveModule?.('code');
   hideAllPanels();
   $('#autofixQueueView').classList.remove('hidden');
   setPageContext(
@@ -1145,22 +1148,26 @@ function showAutofixQueueView() {
 
 function showScannersView() {
   currentView = 'scanners';
+  window.AegisModules?.setActiveModule?.('code');
   hideAllPanels();
   $('#scannersView').classList.remove('hidden');
   setPageContext('Scanners', 'Aegis Loop · Code', 'Engines running on every repository and PR scan');
   setActiveNav('navScanners');
   setModulePill('code');
   renderScanners();
+  history.replaceState(null, '', '/app/?view=scanners');
 }
 
 function showIntegrationsView() {
   currentView = 'integrations';
+  window.AegisModules?.setActiveModule?.('code');
   hideAllPanels();
   $('#integrationsView').classList.remove('hidden');
   setPageContext('Integrations', 'Aegis Loop · Workspace', 'GitHub, webhooks, PR checks, and AI autofix');
   setActiveNav('navIntegrations');
   setModulePill('code');
   renderIntegrations();
+  history.replaceState(null, '', '/app/?view=integrations');
 }
 
 async function renderPRScans() {
@@ -1354,6 +1361,7 @@ function renderIntegrations() {
 
 function showReposView() {
   currentView = 'repos';
+  window.AegisModules?.setActiveModule?.('code');
   hideAllPanels();
   $('#reposView').classList.remove('hidden');
   setPageContext(
@@ -1380,6 +1388,7 @@ function showReposView() {
 
 function showFeedView() {
   currentView = 'feed';
+  window.AegisModules?.setActiveModule?.('code');
   hideAllPanels();
   $('#overviewGuideWrap')?.classList.remove('hidden');
   setActiveNav('navFeed');
@@ -1413,26 +1422,32 @@ function showFeedView() {
     showHomeView();
     $('#findingsSearchInput').value = '';
   }
+  history.replaceState(null, '', '/app/');
 }
 
 function showSettingsView() {
   currentView = 'settings';
+  window.AegisModules?.setActiveModule?.('code');
   hideAllPanels();
   $('#settingsView').classList.remove('hidden');
   setPageContext('Settings', 'Aegis Loop · Workspace', 'Account, appearance, and scanner configuration');
   setActiveNav('navSettings');
   setModulePill('code');
   renderSettings();
+  history.replaceState(null, '', '/app/?view=settings');
 }
 
 function showDocsView(sectionId) {
   currentView = 'docs';
+  window.AegisModules?.setActiveModule?.('code');
   hideAllPanels();
   $('#docsView').classList.remove('hidden');
   setPageContext('Documentation', 'Aegis Loop · Help', 'Guides for Overview, Code, Cloud, Attack, and Protect');
   setActiveNav('navDocs');
   setModulePill('code');
   renderDocs(sectionId);
+  const section = sectionId ? `&section=${encodeURIComponent(sectionId)}` : '';
+  history.replaceState(null, '', `/app/?view=docs${section}`);
 }
 
 function renderSettings() {
@@ -2305,7 +2320,22 @@ $('#prForm').addEventListener('submit', (e) => {
   runPrScan(pr, $('#publishToPr').checked);
 });
 
-$('#scanTriggerBtn').addEventListener('click', openScanModal);
+$('#scanTriggerBtn').addEventListener('click', () => {
+  const mod = window.AegisModules?.getActiveModule?.() ?? 'code';
+  if (mod === 'cloud') {
+    window.AegisModules?.openCloudScanModal?.();
+    return;
+  }
+  if (mod === 'attack') {
+    window.AegisModules?.openAttackProbeModal?.();
+    return;
+  }
+  if (mod === 'protect') {
+    window.AegisModules?.syncProtectRules?.();
+    return;
+  }
+  openScanModal();
+});
 $('#homeDemoBtn').addEventListener('click', runDemoScan);
 $('#homeScanBtn').addEventListener('click', openScanModal);
 $('#homeConnectBtn').addEventListener('click', () => {

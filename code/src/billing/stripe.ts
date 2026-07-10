@@ -90,6 +90,8 @@ export async function syncBillingFromStripe(login: string): Promise<Account> {
       stripeSubscriptionId: active.id,
       seats: active.items.data[0]?.quantity ?? 1,
     });
+  } else if (account.plan === 'team') {
+    applyPlanChange(login, 'free', { stripeSubscriptionId: undefined, seats: 1 });
   }
   return getAccount(login);
 }
@@ -133,10 +135,11 @@ export async function handleStripeWebhook(rawBody: string, signature: string): P
       const subscriptionId =
         typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
       if (login && subscriptionId) {
+        const sub = await s.subscriptions.retrieve(subscriptionId);
         applyPlanChange(login, 'team', {
           stripeCustomerId: session.customer as string,
           stripeSubscriptionId: subscriptionId,
-          seats: 1,
+          seats: sub.items.data[0]?.quantity ?? 1,
         });
       }
       break;

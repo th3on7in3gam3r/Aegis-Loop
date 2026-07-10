@@ -19,7 +19,8 @@ async function runPrScan(
   owner: string,
   repo: string,
   pullNumber: number,
-  token: string
+  token: string,
+  userLogin: string
 ): Promise<string> {
   const pr = await fetchPullRequest(token, owner, repo, pullNumber);
   let tempDir: string | undefined;
@@ -28,6 +29,7 @@ async function runPrScan(
     tempDir = await clonePullRequest(owner, repo, pr.headBranch, token);
     const scan = await scanDirectory(tempDir, `${owner}/${repo}`, pr.headBranch);
     scan.pullRequest = pr;
+    scan.userLogin = userLogin;
     saveScan(scan);
 
     const dashboardUrl = `${config.appUrl}/app/?scan=${scan.id}`;
@@ -82,7 +84,8 @@ export async function handleGitHubWebhook(
     data.repository.owner.login,
     data.repository.name,
     data.pull_request.number,
-    token
+    token,
+    data.repository.owner.login
   );
 
   return { handled: true, scanId, message: 'PR scan complete' };

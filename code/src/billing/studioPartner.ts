@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { getAccount, setAccountPlan, type Account } from './store.js';
 import { emitBundleStudioOpsEvent } from './studioOps.js';
+import { isOwnerLogin } from './owners.js';
 
 export type StudioBillingEventType =
   | 'bundle.activated'
@@ -56,7 +57,9 @@ export function handleStudioBillingPartnerEvent(
   getAccount(login);
 
   if (event.type === 'bundle.canceled') {
-    setAccountPlan(login, 'free', { stripeSubscriptionId: undefined, seats: 1 });
+    if (!isOwnerLogin(login)) {
+      setAccountPlan(login, 'free', { stripeSubscriptionId: undefined, seats: 1 });
+    }
     emitBundleStudioOpsEvent({
       type: event.type,
       githubLogin: login,
@@ -66,7 +69,7 @@ export function handleStudioBillingPartnerEvent(
       products: event.products,
       email: event.email || null,
     });
-    return { ok: true, login, plan: 'free' };
+    return { ok: true, login, plan: getAccount(login).plan };
   }
 
   const ent = event.entitlements.aegis as { plan?: string } | undefined;

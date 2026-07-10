@@ -5,8 +5,7 @@ import type { AegisModule } from '../types.js';
 
 export function distinctReposForUser(login: string): Set<string> {
   const repos = new Set<string>();
-  for (const scan of listScans('code')) {
-    if (scan.userLogin && scan.userLogin !== login) continue;
+  for (const scan of listScans('code', login)) {
     if (scan.status !== 'complete') continue;
     if (isDemoRepo(scan.repo)) continue;
     repos.add(scan.repo);

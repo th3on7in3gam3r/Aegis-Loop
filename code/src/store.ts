@@ -50,7 +50,7 @@ export function getScan(id: string): ScanResult | undefined {
 export function listScans(module?: import('./types.js').AegisModule, userLogin?: string): ScanResult[] {
   return [...scans.values()]
     .filter((s) => !module || (s.module ?? 'code') === module)
-    .filter((s) => !userLogin || !s.userLogin || s.userLogin === userLogin)
+    .filter((s) => !userLogin || (s.userLogin && s.userLogin === userLogin))
     .sort(
       (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
     );

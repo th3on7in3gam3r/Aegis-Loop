@@ -123,6 +123,42 @@ function tagScan<T extends import('./types.js').ScanResult>(scan: T, login: stri
   return scan;
 }
 
+function assertScanAccess(
+  scan: import('./types.js').ScanResult | undefined,
+  login: string,
+  reply: import('fastify').FastifyReply,
+  opts?: { module?: import('./types.js').AegisModule; label?: string }
+): scan is import('./types.js').ScanResult {
+  const notFound = opts?.label ? `${opts.label} not found` : 'Scan not found';
+  if (!scan) {
+    reply.status(404).send({ error: notFound });
+    return false;
+  }
+  if (opts?.module && (scan.module ?? 'code') !== opts.module) {
+    reply.status(404).send({ error: notFound });
+    return false;
+  }
+  if (!scan.userLogin || scan.userLogin !== login) {
+    reply.status(404).send({ error: notFound });
+    return false;
+  }
+  return true;
+}
+
+function requireProtectAuth(
+  req: import('fastify').FastifyRequest,
+  reply: import('fastify').FastifyReply
+) {
+  const auth = requireAuth(req, reply);
+  if (!auth) return null;
+  const block = assertModuleAccess(auth.account.plan, 'protect');
+  if (block) {
+    planLimitReply(reply, block);
+    return null;
+  }
+  return auth;
+}
+
 function planLimitReply(reply: import('fastify').FastifyReply, message: string) {
   return reply.status(402).send({
     error: message,
@@ -273,10 +309,13 @@ function dashboardUrl(scanId: string): string {
 
 function resolveGithubToken(
   req: Parameters<typeof resolveToken>[0],
-  body?: { githubToken?: string }
+  body?: { githubToken?: string },
+  opts?: { allowServer?: boolean }
 ): string | undefined {
   const fromSession = resolveToken(req, req.headers['x-github-token'] as string | undefined, body?.githubToken);
-  return fromSession ?? (config.github.token || undefined);
+  if (fromSession) return fromSession;
+  if (opts?.allowServer) return config.github.token || undefined;
+  return undefined;
 }
 
 // ── Health ──
@@ -321,7 +360,8 @@ app.addHook('preHandler', async (req, reply) => {
     path.startsWith('/api/auth') ||
     path.startsWith('/api/webhooks') ||
     path.startsWith('/api/billing/webhook') ||
-    path.startsWith('/api/partner/studio-billing')
+    path.startsWith('/api/partner/studio-billing') ||
+    path === '/api/protect/demo'
   ) {
     return;
   }
@@ -440,10 +480,7 @@ app.get('/api/scans/:id', async (req, reply) => {
   if (!auth) return;
   const { id } = req.params as { id: string };
   const scan = getScan(id);
-  if (!scan) return reply.status(404).send({ error: 'Scan not found' });
-  if (scan.userLogin && scan.userLogin !== auth.login) {
-    return reply.status(404).send({ error: 'Scan not found' });
-  }
+  if (!assertScanAccess(scan, auth.login, reply)) return;
   return scan;
 });
 
@@ -543,13 +580,14 @@ app.post('/api/scans/pull-request', async (req, reply) => {
 });
 
 app.post('/api/scans/:scanId/github/publish', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
   const { scanId } = req.params as { scanId: string };
   const token = resolveGithubToken(req);
   if (!token) return reply.status(401).send({ error: 'GitHub not connected' });
 
   const scan = getScan(scanId);
-  if (!scan) return reply.status(404).send({ error: 'Scan not found' });
+  if (!assertScanAccess(scan, auth.login, reply)) return;
   if (!scan.pullRequest) {
     return reply.status(400).send({ error: 'This scan is not linked to a pull request' });
   }
@@ -568,7 +606,7 @@ app.post('/api/scans/:scanId/findings/:findingId/autofix/generate', async (req, 
 
   const { scanId, findingId } = req.params as { scanId: string; findingId: string };
   const scan = getScan(scanId);
-  if (!scan) return reply.status(404).send({ error: 'Scan not found' });
+  if (!assertScanAccess(scan, auth.login, reply)) return;
 
   const finding = scan.findings.find((f) => f.id === findingId);
   if (!finding) return reply.status(404).send({ error: 'Finding not found' });
@@ -595,7 +633,7 @@ app.post('/api/scans/:scanId/findings/:findingId/autofix', async (req, reply) =>
   const body = (req.body ?? {}) as { createPr?: boolean; githubToken?: string };
 
   const scan = getScan(scanId);
-  if (!scan) return reply.status(404).send({ error: 'Scan not found' });
+  if (!assertScanAccess(scan, auth.login, reply)) return;
 
   const finding = scan.findings.find((f) => f.id === findingId);
   if (!finding) return reply.status(404).send({ error: 'Finding not found' });
@@ -684,12 +722,7 @@ app.get('/api/cloud/scans/:id', async (req, reply) => {
   if (!auth) return;
   const { id } = req.params as { id: string };
   const scan = getScan(id);
-  if (!scan || (scan.module ?? 'code') !== 'cloud') {
-    return reply.status(404).send({ error: 'Cloud scan not found' });
-  }
-  if (scan.userLogin && scan.userLogin !== auth.login) {
-    return reply.status(404).send({ error: 'Cloud scan not found' });
-  }
+  if (!assertScanAccess(scan, auth.login, reply, { module: 'cloud', label: 'Cloud scan' })) return;
   return scan;
 });
 
@@ -704,7 +737,7 @@ app.post('/api/cloud/scans/demo', async (req, reply) => {
     auth.login
   );
   saveScan(scan);
-  syncProtectRulesFromScans();
+  syncProtectRulesFromScans(auth.login);
   return scan;
 });
 
@@ -735,7 +768,7 @@ app.post('/api/cloud/scans', async (req, reply) => {
       auth.login
     );
     saveScan(scan);
-    syncProtectRulesFromScans();
+    syncProtectRulesFromScans(auth.login);
     return scan;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Cloud scan failed';
@@ -758,12 +791,7 @@ app.get('/api/attack/scans/:id', async (req, reply) => {
   if (!auth) return;
   const { id } = req.params as { id: string };
   const scan = getScan(id);
-  if (!scan || scan.module !== 'attack') {
-    return reply.status(404).send({ error: 'Attack scan not found' });
-  }
-  if (scan.userLogin && scan.userLogin !== auth.login) {
-    return reply.status(404).send({ error: 'Attack scan not found' });
-  }
+  if (!assertScanAccess(scan, auth.login, reply, { module: 'attack', label: 'Attack scan' })) return;
   return scan;
 });
 
@@ -784,7 +812,7 @@ app.post('/api/attack/scans', async (req, reply) => {
     if (multi?.length) {
       const scans = (await scanAttackTargets(multi)).map((s) => tagScan(s, auth.login));
       for (const scan of scans) saveScan(scan);
-      syncProtectRulesFromScans();
+      syncProtectRulesFromScans(auth.login);
       return { scans, count: scans.length };
     }
     if (!single) {
@@ -792,7 +820,7 @@ app.post('/api/attack/scans', async (req, reply) => {
     }
     const scan = tagScan(await scanAttackTarget(single), auth.login);
     saveScan(scan);
-    syncProtectRulesFromScans();
+    syncProtectRulesFromScans(auth.login);
     return scan;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Attack probe failed';
@@ -965,7 +993,7 @@ app.delete('/api/keys/:id', async (req, reply) => {
 });
 
 app.get('/api/protect/rules/export', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  if (!requireProtectAuth(req, reply)) return;
   const rules = listProtectRules();
   reply.header('Content-Type', 'application/json');
   reply.header('Content-Disposition', 'attachment; filename="aegis-protect-rules.json"');
@@ -986,23 +1014,24 @@ app.get('/api/protect/rules/export', async (req, reply) => {
 // ── Protect module ──
 
 app.get('/api/protect/rules', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  if (!requireProtectAuth(req, reply)) return;
   return { rules: listProtectRules(), stats: protectStats() };
 });
 
 app.get('/api/protect/events', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  if (!requireProtectAuth(req, reply)) return;
   return { events: listProtectEvents() };
 });
 
 app.post('/api/protect/sync', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
-  const rules = syncProtectRulesFromScans();
+  const auth = requireProtectAuth(req, reply);
+  if (!auth) return;
+  const rules = syncProtectRulesFromScans(auth.login);
   return { rules, stats: protectStats() };
 });
 
 app.patch('/api/protect/rules/*', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  if (!requireProtectAuth(req, reply)) return;
   const id = decodeURIComponent((req.params as { '*': string })['*'] ?? '');
   const { enabled } = req.body as { enabled?: boolean };
   if (!id) return reply.status(400).send({ error: 'rule id is required' });
@@ -1015,7 +1044,7 @@ app.patch('/api/protect/rules/*', async (req, reply) => {
 });
 
 app.post('/api/protect/demo', async (req, reply) => {
-  if (!requireSession(req, reply)) return;
+  if (!requireProtectAuth(req, reply)) return;
   const body = req.body as { payload?: string };
   const payload = body.payload ?? "' OR 1=1 --";
   const event = evaluateProtectRequest('POST', '/api/protect/demo', '', payload);
@@ -1050,6 +1079,12 @@ app.setNotFoundHandler((req, reply) => {
   }
   return reply.redirect('/');
 });
+
+const DEV_SESSION_SECRET = 'aegis-loop-dev-secret-change-in-prod';
+const isLocalApp = /localhost|127\.0\.0\.1/i.test(config.appUrl);
+if (!isLocalApp && (!process.env.SESSION_SECRET || config.sessionSecret === DEV_SESSION_SECRET)) {
+  throw new Error('SESSION_SECRET must be set to a strong random value in production');
+}
 
 await app.listen({ port: config.port, host: '0.0.0.0' });
 console.log(`\n  Aegis Loop → ${config.appUrl}`);
