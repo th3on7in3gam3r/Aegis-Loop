@@ -113,6 +113,10 @@ function makeRateLimiter(limit: number, windowMs: number) {
 const urlCheckRateOk = makeRateLimiter(10, 60_000);
 const scanRateOk = makeRateLimiter(12, 60_000);
 const authRateOk = makeRateLimiter(10, 60_000);
+const demoPreviewRateOk = makeRateLimiter(20, 60_000);
+
+let demoPreviewCache: { at: number; scan: import('./types.js').ScanResult } | null = null;
+const DEMO_PREVIEW_TTL_MS = 10 * 60_000;
 
 function rateLimited(reply: import('fastify').FastifyReply) {
   return reply.status(429).send({ error: 'Rate limit exceeded — try again in a minute' });
@@ -353,6 +357,23 @@ app.get('/api/health', async () => ({
   },
   storage: dbConfigured() ? 'postgres' : 'file',
 }));
+
+app.get('/api/demo/preview', async (req, reply) => {
+  if (!demoPreviewRateOk(req.ip || 'unknown')) return rateLimited(reply);
+  const refresh = (req.query as { refresh?: string }).refresh === '1';
+  const now = Date.now();
+  if (!refresh && demoPreviewCache && now - demoPreviewCache.at < DEMO_PREVIEW_TTL_MS) {
+    return demoPreviewCache.scan;
+  }
+  try {
+    const scan = await scanDirectory(config.demoRepo, 'aegis-loop/sample-app', 'main');
+    demoPreviewCache = { at: now, scan };
+    return scan;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Demo scan failed';
+    return reply.status(500).send({ error: message });
+  }
+});
 
 app.addHook('preHandler', async (req, reply) => {
   const path = req.url.split('?')[0];
