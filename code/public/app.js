@@ -1030,12 +1030,15 @@ async function loadWorkspaceFindings() {
   return rows;
 }
 
-async function showFindingsView() {
+async function showFindingsView(opts = {}) {
+  const repoFilter = typeof opts.repoFilter === 'string' ? opts.repoFilter.trim() : '';
   currentView = 'findings';
   hideAllPanels();
   setActiveNav('navFindings');
   setModulePill('code');
   $('#dashboard').classList.remove('hidden');
+  $('#overviewCharts').classList.add('hidden');
+  $('#overviewGuideWrap')?.classList.add('hidden');
 
   try {
     const rows = await loadWorkspaceFindings();
@@ -1053,17 +1056,51 @@ async function showFindingsView() {
       return;
     }
 
-    $('#statsStrip').classList.remove('hidden');
-    updateStatsStripWorkspace();
+    if (repoFilter) {
+      const scan =
+        repoScanMap[repoFilter] ??
+        (currentScan?.repo === repoFilter ? currentScan : null);
+      if (scan?.stats) {
+        $('#statsStrip').classList.remove('hidden');
+        updateStatsStrip(scan);
+      } else {
+        $('#statsStrip').classList.add('hidden');
+      }
+      if (!opts.keepSearch) {
+        $('#findingsSearchInput').value = repoFilter;
+      }
+      const open = rows.filter(
+        (f) => !f.fixed && (f._scanRepo ?? '').toLowerCase() === repoFilter.toLowerCase(),
+      ).length;
+      setPageContext(
+        'Findings',
+        repoFilter,
+        `${open} open issue${open === 1 ? '' : 's'} in this repository`,
+      );
+      filterFindings();
+      const scanId = scan?.id ?? currentScan?.id;
+      history.replaceState(
+        null,
+        '',
+        scanId
+          ? `/app/?scan=${scanId}&view=findings&repo=${encodeURIComponent(repoFilter)}`
+          : `/app/?view=findings&repo=${encodeURIComponent(repoFilter)}`,
+      );
+      return;
+    }
+
+    $('#statsStrip').classList.add('hidden');
+    if (!opts.keepSearch) {
+      $('#findingsSearchInput').value = '';
+    }
 
     const open = rows.filter((f) => !f.fixed).length;
     setPageContext(
       'Findings',
       'Aegis Loop · Workspace',
-      `${open} open across Code, Cloud, and Attack`
+      `${open} open across Code, Cloud, and Attack`,
     );
 
-    const q = $('#findingsSearchInput').value.trim();
     filterFindings();
 
     history.replaceState(null, '', '/app/?view=findings');
@@ -1999,13 +2036,9 @@ async function goToRepoFindings(scanId, repo) {
   const full = await api(`/api/scans/${scanId}`);
   currentScan = full;
   repoScanMap[full.repo] = full;
-  currentView = 'findings';
-  await showFindingsView();
   const filterRepo = repo ?? full.repo;
-  $('#findingsSearchInput').value = filterRepo;
-  filterFindings();
-  refreshHistory();
-  history.replaceState(null, '', `/app/?scan=${full.id}&view=findings`);
+  await showFindingsView({ repoFilter: filterRepo });
+  await refreshHistory();
   return full;
 }
 
@@ -2226,12 +2259,14 @@ async function refreshHistory() {
     }
     await loadRepoScanMap();
     updateSidebarStats();
-    renderOverviewCharts();
-    renderHomeChecklist();
     if (currentView === 'feed') {
+      renderOverviewCharts();
       updateOverviewGuideSteps();
       window.AegisModules?.applyGuideVisibility?.('overview');
+    } else {
+      $('#overviewCharts').classList.add('hidden');
     }
+    renderHomeChecklist();
     updateDemoUi();
   } catch { /* offline */ }
 }
@@ -2545,7 +2580,8 @@ loadAuth().then(async () => {
     showGrowthView();
     refreshHistory();
   } else if (view === 'findings') {
-    await showFindingsView();
+    const repo = params.get('repo');
+    await showFindingsView(repo ? { repoFilter: repo, keepSearch: true } : {});
     refreshHistory();
   } else {
     refreshHistory().then(async () => {
