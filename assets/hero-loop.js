@@ -62,7 +62,7 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const cx = w * 0.5;
-    const cy = h * 0.42;
+    const cy = h * 0.48;
     const radius = Math.min(w, h) * 0.34;
     const count = LABELS.length;
 
@@ -99,7 +99,7 @@
   function center() {
     const parallaxX = (mouseX - 0.5) * 12;
     const parallaxY = (mouseY - 0.5) * 10;
-    return { x: w * 0.5 + parallaxX, y: h * 0.42 + parallaxY };
+    return { x: w * 0.5 + parallaxX, y: h * 0.48 + parallaxY };
   }
 
   function drawGrid(cx, cy, maxR) {
@@ -166,8 +166,8 @@
     const s = scale * pulse;
 
     const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 2);
-    glow.addColorStop(0, rgba(C.violet, 0.22));
-    glow.addColorStop(0.55, rgba(C.violetLight, 0.08));
+    glow.addColorStop(0, rgba(C.violet, 0.2));
+    glow.addColorStop(0.55, rgba(C.violetLight, 0.07));
     glow.addColorStop(1, rgba(C.violet, 0));
     ctx.fillStyle = glow;
     ctx.beginPath();
@@ -176,25 +176,32 @@
 
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.scale(s / 42, s / 42);
+    ctx.scale(s / 14, s / 14);
+
     ctx.beginPath();
-    ctx.moveTo(0, -28);
-    ctx.lineTo(22, -14);
-    ctx.lineTo(22, 8);
-    ctx.quadraticCurveTo(0, 28, -22, 8);
-    ctx.lineTo(-22, -14);
+    ctx.moveTo(0, -12);
+    ctx.lineTo(-10, -7);
+    ctx.lineTo(-10, 0);
+    ctx.bezierCurveTo(-10, 6.5, -5.7, 10.5, 0, 12);
+    ctx.bezierCurveTo(5.7, 10.5, 10, 6.5, 10, 0);
+    ctx.lineTo(10, -7);
     ctx.closePath();
-    ctx.fillStyle = rgba(C.violet, 0.14);
+    ctx.fillStyle = rgba(C.violet, 0.16);
     ctx.strokeStyle = rgba(C.violetLight, 0.55);
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.2;
     ctx.fill();
     ctx.stroke();
 
-    ctx.strokeStyle = rgba(C.violetLight, 0.75);
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = rgba(C.violetLight, 0.78);
+    ctx.lineWidth = 1.4;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.arc(0, -2, 10, -Math.PI * 0.15, Math.PI * 1.12);
+    ctx.arc(0, 2, 5.5, -Math.PI * 0.55, Math.PI * 0.75);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(4.5, -1.5);
+    ctx.lineTo(5.8, 2.2);
+    ctx.lineTo(2.2, 3.2);
     ctx.stroke();
     ctx.restore();
   }
