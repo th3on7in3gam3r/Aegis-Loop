@@ -127,9 +127,10 @@
       .join('');
 
     if (els.note) {
+      const n = scan.findings?.length || 0;
       els.note.textContent =
-        (scan.findings?.length || 0) +
-        ' findings from a real scan · sign in to save scans and run A-Fix';
+        n + ' finding' + (n === 1 ? '' : 's') +
+        ' on the free sample repo · start free to scan your GitHub repos';
     }
   }
 

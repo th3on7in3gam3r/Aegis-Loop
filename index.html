@@ -412,6 +412,26 @@
   .dashboard.hero-live { cursor: default; }
   .dashboard.hero-live .dash-scan-btn { cursor: pointer; }
   .dashboard.hero-live.is-loading .dash-main { opacity: 0.55; pointer-events: none; }
+  .hero-demo-caption {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    line-height: 1.5;
+    max-width: 520px;
+  }
+  .hero-demo-caption strong { color: var(--text-primary); font-weight: 600; }
+  .hero-demo-caption .free-tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--green);
+    background: var(--green-dim);
+    border: 1px solid rgba(34,197,94,0.25);
+    padding: 2px 8px;
+    border-radius: 100px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
   .hero-live-badge {
     margin-left: auto;
     font-family: var(--font-mono);
@@ -1208,7 +1228,7 @@
           <span class="line"><span class="word">Fix it.</span></span>
           <span class="line"><span class="word gradient-text">Ship it.</span></span>
         </h1>
-        <p class="hero-sub reveal reveal-d1">Aegis Loop scans your code, cloud configs, and authorized URLs — then helps you fix what matters in pull requests. Free tier covers Code scanning; Team unlocks autofix PRs, all modules, and CI keys.</p>
+        <p class="hero-sub reveal reveal-d1">Aegis Loop scans your code, cloud configs, and authorized URLs — then helps you fix what matters in pull requests. <strong>Try the free live sample on the right</strong> — then sign up to scan your own GitHub repos (Free tier: 3 repos, no credit card).</p>
         <div class="hero-ctas reveal reveal-d2">
           <a href="/login" class="btn btn-primary btn-lg">Start for Free <span class="btn-arrow">→</span></a>
           <a href="#contact" class="btn btn-ghost btn-lg">Book a Demo</a>
@@ -1224,6 +1244,7 @@
       </div>
 
       <div class="reveal reveal-d2">
+        <p class="hero-demo-caption"><span class="free-tag">Free sample</span> <strong>Live scan</strong> on our bundled demo repo — not your code, no sign-in required. Connect GitHub free to scan yours.</p>
         <div class="dashboard hero-live" id="heroDash">
           <div class="dash-bar">
             <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
@@ -1272,8 +1293,8 @@
               </div>
               <div id="heroFindings"></div>
               <div class="hero-live-foot">
-                <p id="heroLiveNote">Real scan results — same engine as the dashboard.</p>
-                <a href="/login?next=%2Fapp%2F" id="heroOpenApp">Sign in to A-Fix findings →</a>
+                <p id="heroLiveNote">Free sample scan · sign up to save results and scan your repos</p>
+                <a href="/login?next=%2Fapp%2F" id="heroOpenApp">Start free with GitHub →</a>
               </div>
             </div>
           </div>
