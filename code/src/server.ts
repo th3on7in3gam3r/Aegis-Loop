@@ -45,6 +45,7 @@ import {
   resolveToken,
   setSessionCookie,
 } from './session.js';
+import { loadSessionStore } from './sessionStore.js';
 import { requireAuth, resolveAuth } from './billing/auth.js';
 import { assertAutofixAccess, assertModuleAccess, canScanRepo, planSummary } from './billing/limits.js';
 import { getAccountForUser, syncOwnerPlan } from './billing/owners.js';
@@ -90,20 +91,35 @@ loadStore();
 loadProtectStore();
 loadAccountStore();
 loadAnalyticsStore();
+loadSessionStore();
 
-const analyticsRate = new Map<string, { count: number; reset: number }>();
-const ANALYTICS_RATE_LIMIT = 120;
-const ANALYTICS_RATE_WINDOW_MS = 60_000;
+// Fixed-window per-key rate limiter (in-memory; fine for single instance)
+function makeRateLimiter(limit: number, windowMs: number) {
+  const buckets = new Map<string, { count: number; reset: number }>();
+  return (key: string): boolean => {
+    const now = Date.now();
+    if (buckets.size > 10_000) {
+      for (const [k, row] of buckets) {
+        if (now > row.reset) buckets.delete(k);
+      }
+    }
+    const row = buckets.get(key);
+    if (!row || now > row.reset) {
+      buckets.set(key, { count: 1, reset: now + windowMs });
+      return true;
+    }
+    row.count += 1;
+    return row.count <= limit;
+  };
+}
 
-function analyticsRateOk(ip: string): boolean {
-  const now = Date.now();
-  const row = analyticsRate.get(ip);
-  if (!row || now > row.reset) {
-    analyticsRate.set(ip, { count: 1, reset: now + ANALYTICS_RATE_WINDOW_MS });
-    return true;
-  }
-  row.count += 1;
-  return row.count <= ANALYTICS_RATE_LIMIT;
+const analyticsRateOk = makeRateLimiter(120, 60_000);
+const urlCheckRateOk = makeRateLimiter(10, 60_000);
+const scanRateOk = makeRateLimiter(12, 60_000);
+const authRateOk = makeRateLimiter(10, 60_000);
+
+function rateLimited(reply: import('fastify').FastifyReply) {
+  return reply.status(429).send({ error: 'Rate limit exceeded — try again in a minute' });
 }
 
 function tagScan<T extends import('./types.js').ScanResult>(scan: T, login: string): T {
@@ -147,6 +163,7 @@ app.get('/llms.txt', async (_req, reply) => {
 
 /** Partner API — marketer-safe URL header probe (growth stack / AI-CMO). */
 app.get('/api/v1/url-check', async (req, reply) => {
+  if (!urlCheckRateOk(req.ip || 'unknown')) return rateLimited(reply);
   const url = (req.query as { url?: string }).url?.trim();
   if (!url) {
     return reply.code(400).send({ error: 'url query parameter is required' });
@@ -387,6 +404,7 @@ app.get('/api/auth/github/callback', async (req, reply) => {
 });
 
 app.post('/api/auth/pat', async (req, reply) => {
+  if (!authRateOk(req.ip || 'unknown')) return rateLimited(reply);
   const { token } = req.body as { token?: string };
   if (!token?.trim()) {
     return reply.status(400).send({ error: 'token is required' });
@@ -403,8 +421,8 @@ app.post('/api/auth/pat', async (req, reply) => {
   }
 });
 
-app.post('/api/auth/logout', async (_req, reply) => {
-  clearSessionCookie(reply);
+app.post('/api/auth/logout', async (req, reply) => {
+  clearSessionCookie(req, reply);
   return { ok: true };
 });
 
@@ -448,12 +466,13 @@ app.post('/api/scans/demo', async (req, reply) => {
 app.post('/api/scans', async (req, reply) => {
   const auth = requireAuth(req, reply);
   if (!auth) return;
+  if (!scanRateOk(auth.login)) return rateLimited(reply);
   const body = req.body as { repo?: string; branch?: string };
   if (!body.repo?.trim()) {
     return reply.status(400).send({ error: 'repo is required (owner/repo or GitHub URL)' });
   }
 
-    const token = resolveGithubToken(req, req.headers['x-github-token'] as string | undefined, (body as { githubToken?: string }).githubToken);
+  const token = resolveGithubToken(req, body as { githubToken?: string });
   let tempDir: string | undefined;
 
   try {
@@ -480,8 +499,9 @@ app.post('/api/scans', async (req, reply) => {
 app.post('/api/scans/pull-request', async (req, reply) => {
   const auth = requireAuth(req, reply);
   if (!auth) return;
+  if (!scanRateOk(auth.login)) return rateLimited(reply);
   const body = req.body as { pr?: string; owner?: string; repo?: string; pullNumber?: number; publish?: boolean };
-    const token = resolveGithubToken(req, req.headers['x-github-token'] as string | undefined, (body as { githubToken?: string }).githubToken);
+  const token = resolveGithubToken(req, body as { githubToken?: string });
 
   let owner: string;
   let repo: string;
@@ -699,6 +719,7 @@ app.post('/api/cloud/scans/demo', async (req, reply) => {
 app.post('/api/cloud/scans', async (req, reply) => {
   const auth = requireAuth(req, reply);
   if (!auth) return;
+  if (!scanRateOk(auth.login)) return rateLimited(reply);
   const moduleBlock = assertModuleAccess(auth.account.plan, 'cloud');
   if (moduleBlock) return planLimitReply(reply, moduleBlock);
 
@@ -757,6 +778,7 @@ app.get('/api/attack/scans/:id', async (req, reply) => {
 app.post('/api/attack/scans', async (req, reply) => {
   const auth = requireAuth(req, reply);
   if (!auth) return;
+  if (!scanRateOk(auth.login)) return rateLimited(reply);
   const moduleBlock = assertModuleAccess(auth.account.plan, 'attack');
   if (moduleBlock) return planLimitReply(reply, moduleBlock);
 
@@ -794,6 +816,7 @@ app.post('/api/ci/scan', async (req, reply) => {
   if (auth.via !== 'apiKey') {
     return reply.status(403).send({ error: 'CI scans require an API key (Authorization: Bearer aegis_…)' });
   }
+  if (!scanRateOk(auth.login)) return rateLimited(reply);
 
   const body = req.body as { repo?: string; pr?: number; branch?: string };
   if (!body.repo?.trim()) {

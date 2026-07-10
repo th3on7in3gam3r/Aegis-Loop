@@ -1,44 +1,39 @@
 import { config } from './config.js';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { GitHubSession } from './types.js';
+import { createServerSession, destroyServerSession, getServerSession } from './sessionStore.js';
 
-const COOKIE = 'aegis_github';
+const COOKIE = 'aegis_sid';
+const LEGACY_COOKIE = 'aegis_github';
 const secureCookie = config.appUrl.startsWith('https://');
 
-export function setSessionCookie(
-  reply: { setCookie: (name: string, value: string, opts: object) => void },
-  session: GitHubSession
-): void {
-  reply.setCookie(COOKIE, JSON.stringify(session), {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: secureCookie,
-    path: '/',
+const cookieOpts = {
+  httpOnly: true,
+  sameSite: 'lax' as const,
+  secure: secureCookie,
+  path: '/',
+  signed: true,
+};
+
+export function setSessionCookie(reply: FastifyReply, session: GitHubSession): void {
+  const sessionId = createServerSession(session);
+  reply.setCookie(COOKIE, sessionId, {
+    ...cookieOpts,
     maxAge: 60 * 60 * 24 * 7,
-    signed: true,
   });
 }
 
-export function clearSessionCookie(
-  reply: { clearCookie: (name: string, opts: object) => void }
-): void {
-  reply.clearCookie(COOKIE, {
-    path: '/',
-    signed: true,
-    httpOnly: true,
-    secure: secureCookie,
-    sameSite: 'lax',
-  });
+export function clearSessionCookie(req: FastifyRequest, reply: FastifyReply): void {
+  const raw = req.unsignCookie(req.cookies[COOKIE] ?? '');
+  if (raw.valid && raw.value) destroyServerSession(raw.value);
+  reply.clearCookie(COOKIE, cookieOpts);
+  reply.clearCookie(LEGACY_COOKIE, cookieOpts);
 }
 
 export function getSession(req: FastifyRequest): GitHubSession | null {
   const raw = req.unsignCookie(req.cookies[COOKIE] ?? '');
   if (!raw.valid || !raw.value) return null;
-  try {
-    return JSON.parse(raw.value) as GitHubSession;
-  } catch {
-    return null;
-  }
+  return getServerSession(raw.value);
 }
 
 export function requireSession(
