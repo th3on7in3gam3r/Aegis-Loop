@@ -1,6 +1,4 @@
 const API = window.location.origin;
-import { initGrowth, showGrowthView as openGrowthView } from './growth.js';
-
 let currentScan = null;
 let activeFinding = null;
 let githubUser = null;
@@ -670,7 +668,6 @@ function hideAllPanels() {
   $('#autofixQueueView').classList.add('hidden');
   $('#scannersView').classList.add('hidden');
   $('#integrationsView').classList.add('hidden');
-  $('#growthView').classList.add('hidden');
   window.AegisModules?.hideModuleViews?.();
   updateOverviewGuideHeaderBtn();
 }
@@ -1158,11 +1155,6 @@ function showIntegrationsView() {
   setActiveNav('navIntegrations');
   setModulePill('code');
   renderIntegrations();
-}
-
-function showGrowthView() {
-  currentView = 'growth';
-  openGrowthView();
 }
 
 async function renderPRScans() {
@@ -2447,11 +2439,6 @@ $('#navIntegrations').addEventListener('click', (e) => {
   showIntegrationsView();
 });
 
-$('#navGrowth').addEventListener('click', (e) => {
-  e.preventDefault();
-  showGrowthView();
-});
-
 $$('.module-pill').forEach((pill) => {
   pill.addEventListener('click', () => {
     const mod = pill.dataset.module;
@@ -2500,7 +2487,6 @@ window.aegisOpenFixGuide = openFixGuidePanel;
 
 initTheme();
 initMobileNav();
-initGrowth();
 window.AegisModules?.bindModuleEvents?.();
 
 loadAuth().then(async () => {
@@ -2584,9 +2570,6 @@ loadAuth().then(async () => {
     refreshHistory();
   } else if (view === 'integrations') {
     showIntegrationsView();
-    refreshHistory();
-  } else if (view === 'growth') {
-    showGrowthView();
     refreshHistory();
   } else if (view === 'findings') {
     const repo = params.get('repo');

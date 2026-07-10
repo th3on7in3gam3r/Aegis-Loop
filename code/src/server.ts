@@ -57,9 +57,6 @@ import {
   revokeApiKey,
 } from './billing/store.js';
 import { emitUserSignup } from './billing/studioOps.js';
-import { buildAnalyticsSummary } from './analytics/aggregate.js';
-import { buildRuleInsights, enrichInsightsWithAi } from './analytics/insights.js';
-import { ingestAnalyticsEvents, listAnalyticsEvents, loadAnalyticsStore, recordServerConversion } from './analytics/store.js';
 import {
   createBillingPortalSession,
   createCheckoutSession,
@@ -91,7 +88,6 @@ const app = Fastify({ logger: true });
 await loadStore();
 await loadProtectStore();
 await loadAccountStore();
-await loadAnalyticsStore();
 await loadSessionStore();
 
 // Fixed-window per-key rate limiter (in-memory; fine for single instance)
@@ -114,7 +110,6 @@ function makeRateLimiter(limit: number, windowMs: number) {
   };
 }
 
-const analyticsRateOk = makeRateLimiter(120, 60_000);
 const urlCheckRateOk = makeRateLimiter(10, 60_000);
 const scanRateOk = makeRateLimiter(12, 60_000);
 const authRateOk = makeRateLimiter(10, 60_000);
@@ -138,6 +133,29 @@ function planLimitReply(reply: import('fastify').FastifyReply, message: string) 
 
 await app.register(fastifyCookie, { secret: config.sessionSecret });
 await app.register(cors, { origin: true });
+
+// Security headers (the same hygiene the Attack module probes for)
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "img-src 'self' data: https://avatars.githubusercontent.com",
+  "connect-src 'self'",
+  "frame-ancestors 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ');
+
+app.addHook('onSend', async (_req, reply) => {
+  reply.header('Content-Security-Policy', CSP);
+  reply.header('X-Content-Type-Options', 'nosniff');
+  reply.header('X-Frame-Options', 'SAMEORIGIN');
+  reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  if (config.appUrl.startsWith('https://')) {
+    reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+});
 
 // Marketing assets (OG image, etc.)
 await app.register(fastifyStatic, {
@@ -297,40 +315,13 @@ app.get('/api/health', async () => ({
   storage: dbConfigured() ? 'postgres' : 'file',
 }));
 
-app.post('/api/analytics/collect', async (req, reply) => {
-  const ip = req.ip || 'unknown';
-  if (!analyticsRateOk(ip)) {
-    return reply.status(429).send({ error: 'Rate limit exceeded' });
-  }
-  const body = (req.body ?? {}) as { events?: unknown[] };
-  if (!Array.isArray(body.events) || !body.events.length) {
-    return reply.status(400).send({ error: 'events array required' });
-  }
-  if (body.events.length > 25) {
-    return reply.status(400).send({ error: 'Too many events in batch' });
-  }
-  const accepted = ingestAnalyticsEvents(body.events);
-  return { ok: true, accepted: accepted.length };
-});
-
-app.get('/api/analytics/summary', async (req, reply) => {
-  const auth = requireAuth(req, reply);
-  if (!auth) return;
-  const days = Math.min(30, Math.max(1, Number((req.query as { days?: string }).days) || 7));
-  const summary = buildAnalyticsSummary(listAnalyticsEvents(), days);
-  summary.insights = buildRuleInsights(summary);
-  summary.insights = await enrichInsightsWithAi(summary, summary.insights);
-  return summary;
-});
-
 app.addHook('preHandler', async (req, reply) => {
   const path = req.url.split('?')[0];
   if (
     path.startsWith('/api/auth') ||
     path.startsWith('/api/webhooks') ||
     path.startsWith('/api/billing/webhook') ||
-    path.startsWith('/api/partner/studio-billing') ||
-    path === '/api/analytics/collect'
+    path.startsWith('/api/partner/studio-billing')
   ) {
     return;
   }
@@ -383,7 +374,6 @@ function registerAuthenticatedUser(
   syncOwnerPlan(login);
   if (isNew) {
     emitUserSignup({ githubLogin: login, authMethod, email: null });
-    recordServerConversion('signup', { githubLogin: login, path: '/login' });
   }
 }
 
@@ -889,7 +879,6 @@ app.post('/api/billing/checkout', async (req, reply) => {
     return reply.status(503).send({ error: 'Stripe billing is not configured on this server' });
   }
   const body = (req.body ?? {}) as { seats?: number };
-  recordServerConversion('checkout_intent', { githubLogin: auth.login, path: '/app/' });
   const url = await createCheckoutSession(auth.login, body.seats ?? 1);
   if (!url) return reply.status(503).send({ error: 'Could not create checkout session' });
   return { url };

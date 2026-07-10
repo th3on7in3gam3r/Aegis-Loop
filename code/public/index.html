@@ -146,10 +146,6 @@
           <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 2.5h4v3H6zM2.5 10.5h4v3h-4zM9.5 10.5h4v3h-4z"/><path d="M8 5.5v2M4.5 10.5V8.5M11.5 10.5V8.5"/></svg></span>
           Integrations
         </a>
-        <a href="#" class="nav-item sub" id="navGrowth">
-          <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 12V6M6 12V4M10 12V8M14 12V2"/></svg></span>
-          Growth analytics
-        </a>
         <a href="#" class="nav-item sub" id="navDocs">
           <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 2.5h7l3 3V13a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5a1 1 0 011-1z"/><path d="M10 2.5V5.5h3"/><path d="M5 8h6M5 10.5h6"/></svg></span>
           Documentation
@@ -750,77 +746,6 @@
             </div>
           </div>
           <div class="integration-grid" id="integrationGrid"></div>
-        </div>
-
-        <div id="growthView" class="content-panel growth-view hidden">
-          <div class="panel-toolbar growth-toolbar">
-            <div>
-              <h2>Growth analytics</h2>
-              <span class="panel-meta">Visitors, conversions, channels, clicks, heatmaps, and AI insights for your marketing site</span>
-            </div>
-            <div class="growth-toolbar-actions">
-              <select id="growthDaysSelect" class="growth-select" aria-label="Date range">
-                <option value="7" selected>Last 7 days</option>
-                <option value="14">Last 14 days</option>
-                <option value="30">Last 30 days</option>
-              </select>
-              <button type="button" class="btn-outline btn-sm" id="growthRefreshBtn">Refresh</button>
-            </div>
-          </div>
-          <p class="growth-loading">Loading analytics…</p>
-          <div class="growth-body">
-            <div class="growth-kpi-row">
-              <article class="growth-kpi"><span class="growth-kpi-label">Site grade</span><span class="growth-kpi-val" id="growthSiteGrade">—</span></article>
-              <article class="growth-kpi"><span class="growth-kpi-label">Visitors</span><span class="growth-kpi-val" id="growthVisitors">0</span></article>
-              <article class="growth-kpi"><span class="growth-kpi-label">Pageviews</span><span class="growth-kpi-val" id="growthPageviews">0</span></article>
-              <article class="growth-kpi"><span class="growth-kpi-label">Sessions</span><span class="growth-kpi-val" id="growthSessions">0</span></article>
-              <article class="growth-kpi"><span class="growth-kpi-label">Engagement Δ</span><span class="growth-kpi-val" id="growthEngagement">0%</span></article>
-            </div>
-
-            <div class="growth-grid">
-              <section class="growth-card growth-card-wide">
-                <h3>Visitors</h3>
-                <p class="growth-card-desc">Who is coming to your site and how engagement changes over time.</p>
-                <div class="growth-visitor-chart" id="growthVisitorChart"></div>
-              </section>
-
-              <section class="growth-card">
-                <h3>Channels</h3>
-                <p class="growth-card-desc">Where your traffic comes from.</p>
-                <div id="growthChannels"></div>
-              </section>
-
-              <section class="growth-card growth-card-wide">
-                <h3>Conversions</h3>
-                <p class="growth-card-desc">What turns visitors into leads or customers.</p>
-                <div class="growth-stat-grid" id="growthConversions"></div>
-              </section>
-
-              <section class="growth-card growth-card-wide">
-                <h3>Clicks</h3>
-                <p class="growth-card-desc">Buttons, links, and calls-to-action tracked automatically.</p>
-                <div id="growthClicks"></div>
-              </section>
-
-              <section class="growth-card">
-                <h3>Heatmap</h3>
-                <p class="growth-card-desc">Where visitors click on <code id="growthHeatmapMeta">/</code>.</p>
-                <div class="growth-heatmap" id="growthHeatmap"></div>
-              </section>
-
-              <section class="growth-card">
-                <h3>Page grades</h3>
-                <p class="growth-card-desc">Engagement score per page.</p>
-                <div id="growthPages"></div>
-              </section>
-
-              <section class="growth-card growth-card-wide">
-                <h3>AI insights</h3>
-                <p class="growth-card-desc">Automatic analysis and opportunities (LLM-enhanced when configured).</p>
-                <div class="growth-insights" id="growthInsights"></div>
-              </section>
-            </div>
-          </div>
         </div>
 
         <div id="cloudView" class="module-view hidden">
