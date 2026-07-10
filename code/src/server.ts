@@ -1001,10 +1001,11 @@ app.post('/api/protect/sync', async (req, reply) => {
   return { rules, stats: protectStats() };
 });
 
-app.patch('/api/protect/rules/:id', async (req, reply) => {
+app.patch('/api/protect/rules/*', async (req, reply) => {
   if (!requireSession(req, reply)) return;
-  const { id } = req.params as { id: string };
+  const id = decodeURIComponent((req.params as { '*': string })['*'] ?? '');
   const { enabled } = req.body as { enabled?: boolean };
+  if (!id) return reply.status(400).send({ error: 'rule id is required' });
   if (typeof enabled !== 'boolean') {
     return reply.status(400).send({ error: 'enabled (boolean) is required' });
   }

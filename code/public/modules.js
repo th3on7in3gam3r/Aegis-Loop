@@ -431,12 +431,27 @@
 
         rulesBody.querySelectorAll('.protect-toggle').forEach((btn) => {
           btn.addEventListener('click', async () => {
-            await window.aegisApi(`/api/protect/rules/${btn.dataset.id}`, {
-              method: 'PATCH',
-              body: JSON.stringify({ enabled: btn.dataset.enabled === '1' }),
-            });
-            await renderProtectView();
-            window.aegisToast?.('Rule updated');
+            const ruleId = btn.dataset.id;
+            const enabling = btn.dataset.enabled === '1';
+            btn.disabled = true;
+            btn.textContent = enabling ? 'Enabling…' : 'Disabling…';
+            try {
+              const res = await window.aegisApi(
+                `/api/protect/rules/${encodeURIComponent(ruleId)}`,
+                {
+                  method: 'PATCH',
+                  body: JSON.stringify({ enabled: enabling }),
+                }
+              );
+              const idx = protectRules.findIndex((r) => r.id === ruleId);
+              if (idx >= 0 && res.rule) protectRules[idx] = res.rule;
+              await renderProtectView();
+              window.aegisToast?.(enabling ? 'Rule enabled' : 'Rule disabled');
+            } catch (e) {
+              window.aegisToast?.(e.message || 'Could not update rule');
+            } finally {
+              btn.disabled = false;
+            }
           });
         });
       }
