@@ -21,7 +21,8 @@
 </head>
 <body>
   <div class="shell">
-    <aside class="nav-sidebar">
+    <div class="nav-backdrop" id="navBackdrop" aria-hidden="true"></div>
+    <aside class="nav-sidebar" id="appSidebar">
       <div class="sidebar-brand">
         <a href="/" class="nav-logo">
           <span class="logo-mark">
@@ -182,6 +183,9 @@
 
     <div class="shell-main">
       <header class="app-header">
+        <button type="button" class="nav-burger" id="navBurger" aria-label="Open navigation" aria-expanded="false" aria-controls="appSidebar">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></svg>
+        </button>
         <div class="header-left">
           <p class="page-eyebrow" id="pageBreadcrumb">Aegis Loop · Code</p>
           <div class="header-title-row">

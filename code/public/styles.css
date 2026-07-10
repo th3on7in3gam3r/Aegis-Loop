@@ -1492,13 +1492,47 @@ button.sev-badge.sev-filter-btn.active {
 .gh-status { font-size: 11px; color: var(--text-3); }
 .gh-status.linked { color: var(--green); font-weight: 600; }
 
+/* ── Mobile navigation drawer ── */
+.nav-burger {
+  display: none;
+  width: 36px; height: 36px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong); background: var(--surface-raised);
+  cursor: pointer; align-items: center; justify-content: center;
+  color: var(--text-2); flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.nav-burger:hover { background: var(--bg); color: var(--text); border-color: var(--violet); }
+.nav-burger svg { width: 18px; height: 18px; }
+
+.nav-backdrop {
+  position: fixed; inset: 0; z-index: 55;
+  background: rgba(9, 11, 16, 0.5);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
 @media (max-width: 900px) {
-  .nav-sidebar { display: none; }
+  .nav-burger { display: inline-flex; }
+  body.nav-open .nav-backdrop { opacity: 1; pointer-events: auto; }
+  .nav-sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 60;
+    width: 280px; max-width: 85vw;
+    transform: translateX(-105%);
+    transition: transform 0.25s ease;
+    border-right: 1px solid var(--sidebar-border);
+    box-shadow: 0 12px 48px rgba(9, 11, 16, 0.35);
+  }
+  body.nav-open .nav-sidebar { transform: translateX(0); }
+  body.nav-open { overflow: hidden; }
   .feed-main { padding: 16px; }
   .app-header { padding: 14px 16px; flex-wrap: wrap; }
   .col-fix, .col-loc { display: none; }
   .col-repo { width: 120px; }
   .finding-repo { max-width: 108px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-sidebar, .nav-backdrop { transition: none; }
 }
 
 /* ── Growth analytics ── */

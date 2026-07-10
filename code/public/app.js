@@ -258,6 +258,31 @@ function initTheme() {
   $('#themeToggle')?.addEventListener('click', toggleTheme);
 }
 
+function setMobileNav(open) {
+  document.body.classList.toggle('nav-open', open);
+  $('#navBurger')?.setAttribute('aria-expanded', String(open));
+}
+
+function initMobileNav() {
+  const burger = $('#navBurger');
+  const sidebar = $('#appSidebar');
+  if (!burger || !sidebar) return;
+
+  burger.addEventListener('click', () => {
+    setMobileNav(!document.body.classList.contains('nav-open'));
+  });
+  $('#navBackdrop')?.addEventListener('click', () => setMobileNav(false));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.body.classList.contains('nav-open')) setMobileNav(false);
+  });
+  // Navigating closes the drawer
+  sidebar.addEventListener('click', (e) => {
+    if (e.target.closest('.nav-item, .module-pill, .sidebar-upgrade, .module-show-guide, .scan-history li')) {
+      setMobileNav(false);
+    }
+  });
+}
+
 function toast(msg) {
   const el = $('#toast');
   el.textContent = msg;
@@ -2430,6 +2455,7 @@ window.aegisIsCodeFeedView = () => currentView === 'feed';
 window.aegisOpenFixGuide = openFixGuidePanel;
 
 initTheme();
+initMobileNav();
 initGrowth();
 window.AegisModules?.bindModuleEvents?.();
 
