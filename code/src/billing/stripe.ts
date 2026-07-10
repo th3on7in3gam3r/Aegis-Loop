@@ -12,6 +12,7 @@ import {
   setAccountPlan,
   type Account,
 } from './store.js';
+import { isOwnerLogin } from './owners.js';
 
 let stripe: Stripe | null = null;
 
@@ -64,11 +65,42 @@ export async function createBillingPortalSession(login: string): Promise<string 
   return session.url;
 }
 
+/** Pull active subscription from Stripe and apply Team plan (fallback when webhooks lag or fail). */
+export async function syncBillingFromStripe(login: string): Promise<Account> {
+  const s = client();
+  const account = getAccount(login);
+  if (!s) return account;
+
+  let customerId = account.stripeCustomerId;
+  if (!customerId) {
+    const found = await s.customers.search({ query: `metadata['githubLogin']:'${login}'` });
+    customerId = found.data[0]?.id;
+    if (customerId) {
+      account.stripeCustomerId = customerId;
+      saveAccount(account);
+    }
+  }
+  if (!customerId) return account;
+
+  const subs = await s.subscriptions.list({ customer: customerId, status: 'all', limit: 10 });
+  const active = subs.data.find((sub) => sub.status === 'active' || sub.status === 'trialing');
+  if (active) {
+    applyPlanChange(login, 'team', {
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: active.id,
+      seats: active.items.data[0]?.quantity ?? 1,
+    });
+  }
+  return getAccount(login);
+}
+
 function applyPlanChange(
   login: string,
   plan: 'team' | 'free',
   patch: Partial<Pick<Account, 'stripeCustomerId' | 'stripeSubscriptionId' | 'seats'>> = {},
 ): void {
+  if (plan === 'free' && isOwnerLogin(login)) return;
+
   const account = getAccount(login);
   const prevPlan = account.plan;
   setAccountPlan(login, plan, patch);
@@ -98,15 +130,18 @@ export async function handleStripeWebhook(rawBody: string, signature: string): P
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
       const login = session.metadata?.githubLogin;
-      if (login && session.subscription) {
+      const subscriptionId =
+        typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+      if (login && subscriptionId) {
         applyPlanChange(login, 'team', {
           stripeCustomerId: session.customer as string,
-          stripeSubscriptionId: session.subscription as string,
-          seats: session.amount_total ? undefined : 1,
+          stripeSubscriptionId: subscriptionId,
+          seats: 1,
         });
       }
       break;
     }
+    case 'customer.subscription.created':
     case 'customer.subscription.updated': {
       const sub = event.data.object as Stripe.Subscription;
       const login = sub.metadata?.githubLogin;

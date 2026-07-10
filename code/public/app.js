@@ -1492,7 +1492,12 @@ async function renderBillingSettings() {
     return;
   }
   try {
-    const billing = await api('/api/billing/plan');
+    let billing = await api('/api/billing/plan');
+    if (billing.plan === 'free' && healthInfo?.billing?.stripe) {
+      try {
+        billing = await api('/api/billing/sync', { method: 'POST' });
+      } catch { /* Stripe may have no subscription yet */ }
+    }
     githubUser.plan = {
       plan: billing.plan,
       label: billing.label,
@@ -2461,9 +2466,15 @@ loadAuth().then(async () => {
     history.replaceState(null, '', '/app/');
   }
   if (params.get('billing') === 'success') {
-    toast('Team plan active — A-Fix and all modules unlocked');
     history.replaceState(null, '', '/app/');
+    try {
+      await api('/api/billing/sync', { method: 'POST' });
+      toast('Team plan active — A-Fix and all modules unlocked');
+    } catch {
+      toast('Payment received — syncing plan… refresh if still on Free');
+    }
     await loadAuth();
+    showSettingsView();
   }
   if (params.get('billing') === 'cancel') {
     history.replaceState(null, '', '/app/');

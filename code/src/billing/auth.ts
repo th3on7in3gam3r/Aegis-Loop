@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { getSession } from '../session.js';
-import { findAccountByApiKey, getAccount, type Account } from './store.js';
+import { getAccountForUser } from './owners.js';
+import { findAccountByApiKey, type Account } from './store.js';
 
 export interface AuthContext {
   login: string;
@@ -17,12 +18,12 @@ function bearerToken(req: FastifyRequest): string | undefined {
 export function resolveAuth(req: FastifyRequest): AuthContext | null {
   const session = getSession(req);
   if (session) {
-    return { login: session.login, account: getAccount(session.login), via: 'session' };
+    return { login: session.login, account: getAccountForUser(session.login), via: 'session' };
   }
   const token = bearerToken(req);
   if (token) {
     const account = findAccountByApiKey(token);
-    if (account) return { login: account.login, account, via: 'apiKey' };
+    if (account) return { login: account.login, account: getAccountForUser(account.login), via: 'apiKey' };
   }
   return null;
 }

@@ -47,10 +47,10 @@ import {
 } from './session.js';
 import { requireAuth, resolveAuth } from './billing/auth.js';
 import { assertAutofixAccess, assertModuleAccess, canScanRepo, planSummary } from './billing/limits.js';
+import { getAccountForUser, syncOwnerPlan } from './billing/owners.js';
 import {
   createApiKey,
   accountExists,
-  getAccount,
   loadAccountStore,
   revokeApiKey,
 } from './billing/store.js';
@@ -63,6 +63,7 @@ import {
   createCheckoutSession,
   handleStripeWebhook,
   stripeConfigured,
+  syncBillingFromStripe,
 } from './billing/stripe.js';
 import {
   handleStudioBillingPartnerEvent,
@@ -337,7 +338,7 @@ app.addHook('preHandler', async (req, reply) => {
 app.get('/api/auth/me', async (req) => {
   const session = getSession(req);
   if (!session) return { connected: false };
-  const account = getAccount(session.login);
+  const account = getAccountForUser(session.login);
   return {
     connected: true,
     login: session.login,
@@ -360,7 +361,7 @@ function registerAuthenticatedUser(
   authMethod: 'oauth' | 'pat',
 ): void {
   const isNew = !accountExists(login);
-  getAccount(login);
+  syncOwnerPlan(login);
   if (isNew) {
     emitUserSignup({ githubLogin: login, authMethod, email: null });
     recordServerConversion('signup', { githubLogin: login, path: '/login' });
@@ -867,6 +868,21 @@ app.post('/api/billing/checkout', async (req, reply) => {
   const url = await createCheckoutSession(auth.login, body.seats ?? 1);
   if (!url) return reply.status(503).send({ error: 'Could not create checkout session' });
   return { url };
+});
+
+app.post('/api/billing/sync', async (req, reply) => {
+  const auth = requireAuth(req, reply);
+  if (!auth) return;
+  if (!stripeConfigured()) {
+    return reply.status(503).send({ error: 'Stripe billing is not configured on this server' });
+  }
+  try {
+    const account = await syncBillingFromStripe(auth.login);
+    return { ...planSummary(account), stripe: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not sync billing';
+    return reply.status(500).send({ error: message });
+  }
 });
 
 app.post('/api/billing/portal', async (req, reply) => {
