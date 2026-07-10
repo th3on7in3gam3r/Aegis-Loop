@@ -24,10 +24,13 @@ export async function generateAutofix(options: {
   }
 
   const provider = config.ai.provider;
-  const system = `You are a senior application security engineer working on Aegis Loop.
-Given a security finding and the full source file, produce a minimal safe fix.
+  const kind = options.ruleId.startsWith('bug/')
+    ? 'correctness bug'
+    : 'security vulnerability';
+  const system = `You are a senior software engineer working on Aegis Loop.
+Given a ${kind} finding and the full source file, produce a minimal safe fix.
 Respond with valid JSON only — no markdown fences:
-{"description":"brief fix explanation","originalLine":"the vulnerable line","fixedLine":"the corrected line","patchedFile":"complete fixed file contents"}`;
+{"description":"brief fix explanation","originalLine":"the problematic line","fixedLine":"the corrected line","patchedFile":"complete fixed file contents"}`;
 
   const user = `Finding: ${options.title}
 Rule: ${options.ruleId}

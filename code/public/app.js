@@ -21,6 +21,7 @@ const SCANNER_ENGINES = [
   { id: 'secrets', title: 'Secret detection', desc: 'AWS keys, API tokens, passwords, and high-entropy strings in source.', always: true },
   { id: 'sqli', title: 'SQL injection', desc: 'String interpolation and unsafe query construction in application code.', always: true },
   { id: 'eval', title: 'Unsafe execution', desc: 'Dynamic eval and similar patterns that enable remote code execution.', always: true },
+  { id: 'bugs', title: 'Bug detection', desc: 'Logic and correctness issues — empty catches, loose equality, async forEach, and more.', always: true },
   { id: 'osv', title: 'Dependency scanning (OSV)', desc: 'Live lookup against the OSV database for vulnerable npm packages.', healthKey: 'osv' },
   { id: 'ai', title: 'AI remediation', desc: 'LLM-generated patches when templates do not cover a finding.', healthKey: 'ai' },
 ];
@@ -71,13 +72,14 @@ const DOC_SECTIONS = [
       <ul><li><strong>Single repo</strong> — <code>owner/repo</code> + branch (default <code>main</code>)</li>
       <li><strong>All repos</strong> — sequential scan of every accessible repository</li>
       <li><strong>Pull request</strong> — <code>owner/repo#123</code> or PR URL; optional comment + check</li></ul>
-      <p>Rules: exposed secrets, SQL injection patterns, dynamic code execution (<code>unsafe-eval</code>), vulnerable npm packages.</p>`,
+      <p>Rules: exposed secrets, SQL injection patterns, dynamic code execution (<code>unsafe-eval</code>), <strong>logic bugs</strong> (empty catches, loose <code>==</code>, async <code>forEach</code>), and vulnerable npm packages.</p>`,
   },
   {
     id: 'autofix',
     title: 'A-Fix',
     keywords: 'autofix ai fix apply patch llm remediate',
-    html: `<p>Click <strong>A-Fix</strong> on any finding to open the remediation panel. Template fixes apply for secrets and dependencies; AI-generated fixes require <code>ANTHROPIC_API_KEY</code> or <code>OPENAI_API_KEY</code> on the server.</p>
+    html: `<p>Click <strong>A-Fix</strong> on any finding to open the remediation panel. Template fixes apply for secrets, dependencies, and common bugs; AI-generated fixes require <code>ANTHROPIC_API_KEY</code> or <code>OPENAI_API_KEY</code> on the server.</p>
+      <p><strong>Bug findings</strong> include an explanation of what went wrong, manual fix steps, a copyable AI prompt, and one-click AI Fix when configured.</p>
       <p>Always review the diff before applying. Autofix can open a GitHub pull request when scanning real repos.</p>`,
   },
   {
@@ -381,6 +383,23 @@ function fileType(file) {
   if (['ts', 'tsx'].includes(ext)) return { label: 'TS', cls: '' };
   if (['js', 'jsx'].includes(ext)) return { label: 'JS', cls: '' };
   return { label: ext.slice(0, 3).toUpperCase(), cls: '' };
+}
+
+function findingTypeBadge(f) {
+  if (f.ruleId?.startsWith('bug/')) return { label: 'Bug', cls: 'bug' };
+  if (f.ruleId?.startsWith('cloud/')) return { label: 'Cloud', cls: 'cloud' };
+  if (f.ruleId?.startsWith('attack/')) return { label: 'Attack', cls: 'attack' };
+  if (f._module === 'cloud') return { label: 'Cloud', cls: 'cloud' };
+  if (f._module === 'attack') return { label: 'Attack', cls: 'attack' };
+  return fileType(f.file);
+}
+
+function isBugFinding(f) {
+  return f.ruleId?.startsWith('bug/');
+}
+
+function canShowCodeFix(f) {
+  return f.autofix || llmAvailable || f.remediation;
 }
 
 function moduleBadge(mod) {
@@ -1231,7 +1250,7 @@ async function renderAutofixQueue() {
       }
       for (const f of full.findings ?? []) {
         if (f.fixed) continue;
-        if (!f.autofix && !llmAvailable) continue;
+        if (!f.autofix && !llmAvailable && !f.remediation) continue;
         rows.push({ scan: full, finding: f });
       }
     }
@@ -1243,7 +1262,7 @@ async function renderAutofixQueue() {
 
     tbody.innerHTML = '';
     for (const { scan, finding: f } of rows) {
-      const fixType = f.autofix ? 'Template' : 'AI';
+      const fixType = f.autofix ? 'Template' : f.remediation && !llmAvailable ? 'Guide' : 'AI';
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><strong>${escapeHtml(f.title)}</strong><br><small style="color:var(--text-3);font-family:var(--mono);font-size:10px">${escapeHtml(f.file)}:${f.line}</small></td>
@@ -1774,8 +1793,7 @@ function renderFindingsTable(findings, opts = {}) {
 
   for (const f of list) {
     const mod = f._module ?? 'code';
-    const modTag = moduleBadge(mod);
-    const type = modTag ?? fileType(f.file);
+    const type = findingTypeBadge(f);
     const tr = document.createElement('tr');
     if (f.fixed) tr.classList.add('row-fixed');
 
@@ -1786,12 +1804,14 @@ function renderFindingsTable(findings, opts = {}) {
     let statusCell;
     if (f.fixed) {
       statusCell = `<span class="status-fixed">Fixed</span>`;
-    } else if (mod === 'code' && (f.autofix || llmAvailable) && !canAutofix()) {
+    } else if (mod === 'code' && canShowCodeFix(f) && !canAutofix()) {
       statusCell = `<button type="button" class="status-todo upgrade-fix-btn" title="A-Fix requires Team plan">Upgrade</button>`;
     } else if (mod === 'code' && f.autofix) {
-      statusCell = `<button type="button" class="status-autofix autofix-btn" data-id="${f.id}" data-scan="${scanId}">A-Fix</button>`;
+      statusCell = `<button type="button" class="status-autofix autofix-btn" data-id="${f.id}" data-scan="${scanId}">${isBugFinding(f) ? 'AI Fix' : 'A-Fix'}</button>`;
     } else if (mod === 'code' && llmAvailable) {
-      statusCell = `<button type="button" class="status-autofix autofix-btn ai-fix-btn" data-id="${f.id}" data-scan="${scanId}">A-Fix</button>`;
+      statusCell = `<button type="button" class="status-autofix autofix-btn ai-fix-btn" data-id="${f.id}" data-scan="${scanId}">AI Fix</button>`;
+    } else if (mod === 'code' && f.remediation) {
+      statusCell = `<button type="button" class="status-autofix autofix-btn guide-fix-btn" data-id="${f.id}" data-scan="${scanId}">Explain</button>`;
     } else if (mod === 'code') {
       statusCell = `<span class="status-todo">To Do</span>`;
     } else {
@@ -1863,10 +1883,11 @@ function updateFindingsSevFilterUi() {
 }
 
 function buildManualFixPrompt(finding, repo) {
-  let text = `Security fix guidance — ${repo}\n\n`;
+  const kind = isBugFinding(finding) ? 'Bug fix' : 'Security fix';
+  let text = `${kind} guidance — ${repo}\n\n`;
   text += `Issue: ${finding.title}\nSeverity: ${finding.severity}\nRule: ${finding.ruleId}\n`;
   text += `Location: ${finding.file}${finding.line ? `:${finding.line}` : ''}\n\n`;
-  text += `Problem:\n${finding.message}\n\n`;
+  text += `What this means:\n${finding.message}\n\n`;
   if (finding.remediation) {
     text += `Summary:\n${finding.remediation.summary}\n\nSteps:\n`;
     finding.remediation.steps.forEach((step, i) => {
@@ -1874,7 +1895,7 @@ function buildManualFixPrompt(finding, repo) {
     });
     text += '\n';
   }
-  text += `Vulnerable code:\n${finding.snippet}\n\n`;
+  text += `Code:\n${finding.snippet}\n\n`;
   if (finding.autofix) {
     text += `Suggested fix:\n${finding.autofix.fixedLine}\n\n`;
     text += `${finding.autofix.description}\n\n`;
@@ -1968,15 +1989,24 @@ function closeAutofixPanel() {
 
 function populateAutofixPanel(finding, autofix, aiGenerated) {
   panelAiGenerated = aiGenerated;
+  const isBug = isBugFinding(finding);
   $('#panelTitle').textContent = finding.title;
   $('#panelDesc').textContent = aiGenerated
-    ? `AI-generated fix: ${autofix?.description ?? finding.message}`
-    : (autofix?.description ?? finding.message);
+    ? `AI-generated ${isBug ? 'bug' : 'security'} fix: ${autofix?.description ?? finding.message}`
+    : (finding.remediation?.summary ?? autofix?.description ?? finding.message);
   $('#panelSeverity').textContent = sevLabel(finding.severity);
   $('#panelSeverity').className = `sev-badge ${sevClass(finding.severity)}`;
   $('#panelLocation').textContent = `${finding.file}:${finding.line}`;
   $('#panelBefore').textContent = autofix?.originalLine ?? finding.snippet;
-  $('#panelAfter').textContent = autofix?.fixedLine ?? 'Generate or apply a fix to see the suggested change.';
+  if (autofix?.fixedLine) {
+    $('#panelAfter').textContent = autofix.fixedLine;
+  } else if (finding.remediation?.steps?.length) {
+    $('#panelAfter').textContent = finding.remediation.steps
+      .map((step, i) => `${i + 1}. ${step}`)
+      .join('\n\n');
+  } else {
+    $('#panelAfter').textContent = 'Generate or apply a fix to see the suggested change.';
+  }
   $('#manualFixPrompt').value = buildManualFixPrompt(
     { ...finding, autofix: autofix ?? finding.autofix },
     currentScan?.repo ?? '—'
@@ -2014,12 +2044,18 @@ async function openAutofixPanel(findingId, scanId) {
   if (f.autofix) return;
 
   if (!llmAvailable) {
-    $('#panelAfter').textContent = 'No automated patch — use the manual prompt below.';
+    $('#panelAfter').textContent = finding.remediation?.steps?.length
+      ? finding.remediation.steps.map((step, i) => `${i + 1}. ${step}`).join('\n\n')
+      : 'No automated patch — use the manual prompt below.';
     $('#applyFixBtn').classList.add('hidden');
     return;
   }
 
-  $('#panelAfter').textContent = 'Generating AI fix…';
+  if (finding.remediation?.steps?.length && !finding.autofix) {
+    $('#panelAfter').textContent = `${finding.remediation.steps.map((step, i) => `${i + 1}. ${step}`).join('\n\n')}\n\n— Generating AI fix…`;
+  } else {
+    $('#panelAfter').textContent = 'Generating AI fix…';
+  }
   $('#applyFixBtn').disabled = true;
 
   try {

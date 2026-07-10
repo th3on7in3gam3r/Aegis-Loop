@@ -104,6 +104,62 @@ const REMEDIATION: Record<string, FindingRemediation> = {
       'Return generic error pages in production — no stack traces.',
     ],
   },
+  'bug/empty-catch': {
+    summary: 'Never swallow errors silently — log, report, or rethrow.',
+    steps: [
+      'Replace empty catch bodies with structured logging (e.g. console.error or your logger).',
+      'If the error is unexpected, rethrow or return a failed result to the caller.',
+      'Add a test that triggers the failure path so regressions are caught.',
+    ],
+  },
+  'bug/loose-equality': {
+    summary: 'Use strict equality unless you explicitly need type coercion.',
+    steps: [
+      'Replace == with === and != with !==.',
+      'If you compare to null/undefined, prefer `value == null` only when you mean both.',
+      'Run tests after the change — strict equality can surface latent type bugs.',
+    ],
+  },
+  'bug/parseint-no-radix': {
+    summary: 'Always pass a radix to parseInt.',
+    steps: [
+      'Use parseInt(value, 10) for decimal user input.',
+      'Use parseInt(hex, 16) for hexadecimal strings.',
+      'Consider Number() or parseFloat when you need floating-point values.',
+    ],
+  },
+  'bug/console-log': {
+    summary: 'Remove or gate debug logging before production.',
+    steps: [
+      'Delete console.log calls used during development.',
+      'Replace with a logger that supports levels (debug/info/warn/error).',
+      'Gate verbose logs behind NODE_ENV !== "production" or a feature flag.',
+    ],
+  },
+  'bug/foreach-async': {
+    summary: 'Do not use async callbacks with Array.forEach.',
+    steps: [
+      'Use `for (const item of items) { await work(item); }` for sequential async work.',
+      'Use `await Promise.all(items.map(async (item) => ...))` for parallel work.',
+      'Handle errors with try/catch around the loop or .catch on Promise.all.',
+    ],
+  },
+  'bug/assignment-in-condition': {
+    summary: 'Assignment inside if is almost always a typo.',
+    steps: [
+      'If you meant comparison, use === or !==.',
+      'If assignment was intentional, move it above the if and compare separately.',
+      'Enable eslint no-cond-assign to catch this automatically.',
+    ],
+  },
+  'bug/throw-literal': {
+    summary: 'Throw Error objects so stack traces are preserved.',
+    steps: [
+      'Replace throw "message" with throw new Error("message").',
+      'For custom error types, extend Error and set .name.',
+      'Ensure monitoring tools can read err.stack in production.',
+    ],
+  },
 };
 
 export function remediationForRule(ruleId: string): FindingRemediation | undefined {

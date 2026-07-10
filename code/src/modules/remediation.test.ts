@@ -22,6 +22,16 @@ const ATTACK_RULES = [
   'attack/error-leak',
 ];
 
+const BUG_RULES = [
+  'bug/empty-catch',
+  'bug/loose-equality',
+  'bug/parseint-no-radix',
+  'bug/console-log',
+  'bug/foreach-async',
+  'bug/assignment-in-condition',
+  'bug/throw-literal',
+];
+
 describe('remediation', () => {
   it('covers all cloud rule IDs', () => {
     for (const id of CLOUD_RULES) {
@@ -37,6 +47,14 @@ describe('remediation', () => {
       const r = remediationForRule(id);
       assert.ok(r, `missing remediation for ${id}`);
       assert.ok(r!.steps.length >= 1);
+    }
+  });
+
+  it('covers all bug rule IDs', () => {
+    for (const id of BUG_RULES) {
+      const r = remediationForRule(id);
+      assert.ok(r, `missing remediation for ${id}`);
+      assert.ok(r!.steps.length >= 2);
     }
   });
 

@@ -3,10 +3,12 @@ import { join, relative } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Finding, ScanResult } from '../types.js';
 import { runOsvDependencyScan } from './rules/dependencies.js';
+import { bugsRule } from './rules/bugs.js';
 import { injectionRule } from './rules/injection.js';
 import { secretsRule } from './rules/secrets.js';
+import { attachRemediation } from '../modules/remediation.js';
 
-const SYNC_RULES = [secretsRule, injectionRule];
+const SYNC_RULES = [secretsRule, injectionRule, bugsRule];
 
 const SKIP_DIRS = new Set([
   'node_modules',
@@ -74,7 +76,7 @@ export async function scanDirectory(
   const drafts = [...syncDrafts, ...osvDrafts];
 
   const findings: Finding[] = drafts.map((draft) => ({
-    ...draft,
+    ...attachRemediation(draft),
     id: randomUUID(),
     scanId,
     fixed: false,
