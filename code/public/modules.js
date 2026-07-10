@@ -178,11 +178,49 @@
     return sev === 'critical' ? 'Critical' : sev === 'warning' ? 'High' : 'Info';
   }
 
-  function renderModuleFindings(tbody, findings, emptyMsg, module, scanId) {
+  function moduleScanHistoryItem(scan, kind) {
+    const stats = scan.stats ?? {};
+    const score = stats.score ?? '—';
+    const crit = stats.critical ?? 0;
+    const warn = stats.warning ?? 0;
+    const info = stats.info ?? 0;
+    const when = scan.completedAt ?? scan.startedAt;
+    const dateLabel = when ? new Date(when).toLocaleDateString() : '';
+    const label = kind === 'attack'
+      ? (scan.target ?? scan.repo ?? 'URL')
+      : (scan.repo ?? 'repository');
+    return `<li data-id="${escapeHtml(scan.id)}">
+      <span class="module-scan-repo">${escapeHtml(label)}</span>
+      <span class="module-scan-meta">
+        <span class="module-scan-score">Score ${score}</span>
+        <span>${crit}c · ${warn}h · ${info}i</span>
+        ${dateLabel ? `<span>${escapeHtml(dateLabel)}</span>` : ''}
+      </span>
+    </li>`;
+  }
+
+  function renderModuleFindings(tbody, findings, emptyMsg, module, scanId, emptyVariant = 'empty') {
     if (!tbody) return;
     tbody.innerHTML = '';
     if (!findings.length) {
-      tbody.innerHTML = `<tr><td colspan="5" class="repos-loading">${emptyMsg}</td></tr>`;
+      const rowClass = emptyVariant === 'pass'
+        ? 'module-result-pass'
+        : emptyVariant === 'error'
+          ? 'module-result-error'
+          : 'repos-loading';
+      const title = emptyVariant === 'pass'
+        ? 'Passed'
+        : emptyVariant === 'error'
+          ? 'Scan failed'
+          : '';
+      tbody.innerHTML = title
+        ? `<tr><td colspan="5" class="${rowClass}">
+            <div class="module-result-state">
+              <span class="module-result-icon" aria-hidden="true">${emptyVariant === 'pass' ? '✓' : '!'}</span>
+              <div><strong>${title}</strong><p>${emptyMsg}</p></div>
+            </div>
+          </td></tr>`
+        : `<tr><td colspan="5" class="${rowClass}">${emptyMsg}</td></tr>`;
       return;
     }
     for (const f of findings) {
@@ -258,24 +296,6 @@
     );
   }
 
-  function cloudScanHistoryItem(scan) {
-    const stats = scan.stats ?? {};
-    const score = stats.score ?? '—';
-    const crit = stats.critical ?? 0;
-    const warn = stats.warning ?? 0;
-    const info = stats.info ?? 0;
-    const when = scan.completedAt ?? scan.startedAt;
-    const dateLabel = when ? new Date(when).toLocaleDateString() : '';
-    return `<li data-id="${escapeHtml(scan.id)}">
-      <span class="module-scan-repo">${escapeHtml(scan.repo)}</span>
-      <span class="module-scan-meta">
-        <span class="module-scan-score">Score ${score}</span>
-        <span>${crit}c · ${warn}h · ${info}i</span>
-        ${dateLabel ? `<span>${escapeHtml(dateLabel)}</span>` : ''}
-      </span>
-    </li>`;
-  }
-
   function cloudScanEmptyMessage(scan) {
     const repo = scan?.repo ?? 'repository';
     const score = scan?.stats?.score ?? 100;
@@ -310,7 +330,8 @@
         findings,
         cloudScanEmptyMessage(latest),
         'cloud',
-        latest.id
+        latest.id,
+        findings.length ? 'empty' : 'pass'
       );
       window.aegisSetPageContext?.(
         'Cloud posture',
@@ -320,7 +341,14 @@
           : `${latest.repo} · scan passed · score ${latest.stats?.score ?? 100}`
       );
     } else if (hasData && latest?.status === 'failed') {
-      renderModuleFindings($('#cloudFindingsList'), [], latest.error || 'Cloud scan failed', 'cloud', latest.id);
+      renderModuleFindings(
+        $('#cloudFindingsList'),
+        [],
+        latest.error || 'Cloud scan failed — check the repository name and try again.',
+        'cloud',
+        latest.id,
+        'error'
+      );
       window.aegisSetPageContext?.('Cloud posture', 'Aegis Loop / cloud', 'Last scan failed — try again');
     } else if (!hasData) {
       window.aegisSetPageContext?.('Cloud posture', 'Aegis Loop / cloud', 'Scan IaC for public buckets, open security groups, and more');
@@ -329,7 +357,7 @@
     const hist = $('#cloudScanHistory');
     if (hist) {
       hist.innerHTML = scans.length
-        ? scans.slice(0, 8).map((s) => cloudScanHistoryItem(s)).join('')
+        ? scans.slice(0, 8).map((s) => moduleScanHistoryItem(s, 'cloud')).join('')
         : '<li class="scan-history-empty">No cloud scans yet — run a demo or scan your IaC repo</li>';
       hist.querySelectorAll('li[data-id]').forEach((li) => {
         li.addEventListener('click', async () => {
@@ -341,7 +369,8 @@
             findings,
             findings.length ? 'No findings' : cloudScanEmptyMessage(scan),
             'cloud',
-            scan.id
+            scan.id,
+            findings.length ? 'empty' : 'pass'
           );
         });
       });
@@ -413,7 +442,8 @@
         findings,
         attackProbeEmptyMessage(latest),
         'attack',
-        latest.id
+        latest.id,
+        findings.length ? 'empty' : 'pass'
       );
       window.aegisSetPageContext?.(
         'Offensive testing',
@@ -423,7 +453,14 @@
           : `${latest.target ?? latest.repo} · probe passed · score ${latest.stats?.score ?? 100}`
       );
     } else if (hasData && latest?.status === 'failed') {
-      renderModuleFindings($('#attackFindingsList'), [], latest.error || 'Probe failed', 'attack', latest.id);
+      renderModuleFindings(
+        $('#attackFindingsList'),
+        [],
+        latest.error || 'Probe failed — check the URL is reachable from the public internet.',
+        'attack',
+        latest.id,
+        'error'
+      );
       window.aegisSetPageContext?.('Offensive testing', 'Aegis Loop / attack', 'Last probe failed — check the URL');
     } else if (!hasData) {
       window.aegisSetPageContext?.('Offensive testing', 'Aegis Loop / attack', 'Safe passive probes — no destructive exploits');
@@ -432,10 +469,8 @@
     const hist = $('#attackScanHistory');
     if (hist) {
       hist.innerHTML = scans.length
-        ? scans.slice(0, 8).map((s) =>
-            `<li data-id="${escapeHtml(s.id)}">${escapeHtml(s.target ?? s.repo)}<small>${s.stats?.critical ?? 0}c</small></li>`
-          ).join('')
-        : '<li class="scan-history-empty">No probes yet</li>';
+        ? scans.slice(0, 8).map((s) => moduleScanHistoryItem(s, 'attack')).join('')
+        : '<li class="scan-history-empty">No probes yet — use Probe URL to test a live site</li>';
       hist.querySelectorAll('li[data-id]').forEach((li) => {
         li.addEventListener('click', async () => {
           const scan = await window.aegisApi(`/api/attack/scans/${li.dataset.id}`);
@@ -446,7 +481,8 @@
             findings,
             findings.length ? 'No findings' : attackProbeEmptyMessage(scan),
             'attack',
-            scan.id
+            scan.id,
+            findings.length ? 'empty' : 'pass'
           );
         });
       });
@@ -613,6 +649,7 @@ async function switchModule(moduleId) {
     $$('.nav-item').forEach((n) => n.classList.remove('active'));
     $('#statsStrip')?.classList.add('hidden');
     $('#overviewCharts')?.classList.add('hidden');
+    $('#overviewGuideWrap')?.classList.add('hidden');
 
     if (moduleId === 'cloud') {
       await renderCloudView();
