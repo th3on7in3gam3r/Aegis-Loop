@@ -2170,16 +2170,25 @@ async function runBulkScan() {
   toast(`Bulk scan complete — ${total} repos`);
 }
 
-async function runScan(repo, branch) {
+async function runScan(repo, branch, sourceBtn) {
   setLoading('#scanBtn', true, 'Scanning…');
+  if (sourceBtn) {
+    sourceBtn.disabled = true;
+    sourceBtn.innerHTML = '<span class="spinner"></span>Scanning…';
+  }
+  toast(`Scanning ${repo} — this can take up to a minute`);
   try {
     renderScan(await api('/api/scans', { method: 'POST', body: JSON.stringify({ repo, branch }) }));
     $('#scanModal').classList.add('hidden');
-    toast('Scan complete');
+    toast(`Scan complete — ${repo}`);
   } catch (e) {
     toast(e.message);
   } finally {
     setLoading('#scanBtn', false, 'Start scan');
+    if (sourceBtn) {
+      sourceBtn.disabled = false;
+      sourceBtn.textContent = 'Scan';
+    }
   }
 }
 
@@ -2384,7 +2393,7 @@ document.addEventListener('click', (e) => {
   if (target.classList.contains('scan-repo-btn')) {
     const repo = target.dataset.repo;
     const branch = target.dataset.branch || 'main';
-    if (repo) runScan(repo, branch);
+    if (repo && !target.disabled) runScan(repo, branch, target);
   }
   const issuesBtn = target.closest('.repo-issues-btn');
   if (issuesBtn?.dataset.repo) {
