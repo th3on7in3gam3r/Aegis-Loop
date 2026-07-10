@@ -295,6 +295,70 @@
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
   .hero-proof span { font-size: 13px; color: var(--text-muted); }
 
+  /* ── Hero loop canvas ── */
+  .hero-visual {
+    position: relative;
+    min-height: 480px;
+  }
+  .hero-loop {
+    position: absolute;
+    top: -12px;
+    left: -6%;
+    right: -6%;
+    height: 58%;
+    min-height: 220px;
+    max-height: 300px;
+    border-radius: 20px;
+    overflow: hidden;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 70% 80% at 50% 45%, rgba(124,58,237,0.1), transparent 70%),
+      linear-gradient(180deg, rgba(255,255,255,0.5) 0%, transparent 100%);
+    border: 1px solid rgba(124,58,237,0.12);
+    box-shadow: 0 20px 60px -24px rgba(124,58,237,0.2);
+  }
+  .hero-loop-placeholder,
+  .hero-loop-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .hero-loop-placeholder {
+    transition: opacity 0.9s var(--ease-out), transform 0.9s var(--ease-out);
+  }
+  .hero-loop-canvas {
+    opacity: 0;
+    transition: opacity 0.9s var(--ease-out);
+  }
+  .hero-loop.is-live .hero-loop-placeholder {
+    opacity: 0;
+    transform: scale(1.03);
+    pointer-events: none;
+  }
+  .hero-loop.is-live .hero-loop-canvas { opacity: 1; }
+  .hero-loop.is-static .hero-loop-canvas { display: none; }
+  .hero-visual .dashboard {
+    margin-top: clamp(160px, 38vw, 200px);
+    z-index: 2;
+  }
+  @media (max-width: 1023px) {
+    .hero-visual { min-height: 0; }
+    .hero-loop {
+      position: relative;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 240px;
+      min-height: 200px;
+      max-height: none;
+      margin-bottom: 20px;
+      pointer-events: auto;
+    }
+    .hero-visual .dashboard { margin-top: 0; }
+  }
+
   /* ── Dashboard ── */
   .dashboard {
     background: var(--bg-elevated);
@@ -1174,7 +1238,34 @@
         </div>
       </div>
 
-      <div class="reveal reveal-d2">
+      <div class="hero-visual reveal reveal-d2">
+        <div class="hero-loop" id="heroLoop" aria-hidden="true">
+          <svg class="hero-loop-placeholder" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="heroShieldGlow" cx="50%" cy="42%" r="45%">
+                <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.22"/>
+                <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <circle cx="200" cy="108" r="95" fill="url(#heroShieldGlow)"/>
+            <circle cx="200" cy="108" r="72" fill="none" stroke="rgba(124,58,237,0.12)" stroke-width="1"/>
+            <circle cx="200" cy="108" r="48" fill="none" stroke="rgba(124,58,237,0.1)" stroke-width="1"/>
+            <path d="M200 78 L222 92 L222 116 Q200 136 178 116 L178 92 Z" fill="rgba(124,58,237,0.12)" stroke="rgba(139,92,246,0.5)" stroke-width="1.5"/>
+            <path d="M190 104 Q200 88 210 104" fill="none" stroke="rgba(139,92,246,0.65)" stroke-width="2" stroke-linecap="round"/>
+            <g stroke="rgba(139,92,246,0.28)" stroke-width="1.2" fill="none">
+              <path d="M200 108 Q170 60 128 72"/><path d="M200 108 Q248 52 292 78"/>
+              <path d="M200 108 Q310 108 318 148"/><path d="M200 108 Q248 168 292 188"/>
+              <path d="M200 108 Q152 168 108 188"/><path d="M200 108 Q90 128 82 108"/>
+              <path d="M200 108 Q152 52 108 72"/>
+            </g>
+            <g fill="rgba(139,92,246,0.55)">
+              <circle cx="128" cy="72" r="4"/><circle cx="292" cy="78" r="4"/><circle cx="318" cy="148" r="4"/>
+              <circle cx="292" cy="188" r="4"/><circle cx="108" cy="188" r="4"/><circle cx="82" cy="108" r="4"/>
+              <circle cx="108" cy="72" r="4"/>
+            </g>
+          </svg>
+          <canvas class="hero-loop-canvas"></canvas>
+        </div>
         <div class="dashboard" id="heroDash">
           <div class="dash-bar">
             <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
@@ -1256,8 +1347,6 @@
       </div>
     </div>
   </section>
-
-  <!-- MOTTO -->
   <section class="motto divider" id="motto">
     <div class="container">
       <div class="motto-head reveal">
@@ -1873,6 +1962,7 @@
 </footer>
 
 <script src="/assets/cookie-consent.js"></script>
+<script src="/assets/hero-loop.js" defer></script>
 <script>
   // Sticky header
   const header = document.getElementById('header');
