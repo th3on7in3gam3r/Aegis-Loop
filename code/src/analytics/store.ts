@@ -2,15 +2,21 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../config.js';
+import { dbConfigured, loadBlob, saveBlob } from '../db.js';
 import { classifyChannel } from './channels.js';
 import type { AnalyticsEvent, ConversionKind } from './types.js';
 
 const STORE_FILE = join(config.dataDir, 'analytics-events.json');
+const BLOB_NAME = 'analytics-events';
 const MAX_EVENTS = 8000;
 
 const events: AnalyticsEvent[] = [];
 
 function persist(): void {
+  if (dbConfigured()) {
+    saveBlob(BLOB_NAME, events);
+    return;
+  }
   try {
     mkdirSync(config.dataDir, { recursive: true });
     writeFileSync(STORE_FILE, JSON.stringify(events, null, 2));
@@ -19,7 +25,12 @@ function persist(): void {
   }
 }
 
-export function loadAnalyticsStore(): void {
+export async function loadAnalyticsStore(): Promise<void> {
+  if (dbConfigured()) {
+    const data = await loadBlob<AnalyticsEvent[]>(BLOB_NAME);
+    if (data) events.push(...data.slice(-MAX_EVENTS));
+    return;
+  }
   if (!existsSync(STORE_FILE)) return;
   try {
     const data = JSON.parse(readFileSync(STORE_FILE, 'utf8')) as AnalyticsEvent[];

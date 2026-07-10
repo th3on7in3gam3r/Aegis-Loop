@@ -1,11 +1,13 @@
 # Aegis Loop — Render Blueprint
-# Custom domain: after purchase, set APP_URL in Dashboard and add Custom Domain (CNAME → your-app.onrender.com).
+# Data persistence: set DATABASE_URL (e.g. free Neon Postgres) — the free
+# instance has an ephemeral filesystem, so JSON-file storage is wiped on
+# every deploy without it.
 services:
   - type: web
     name: aegis-loop
     runtime: node
     branch: main
-    plan: starter
+    plan: free
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
@@ -23,8 +25,8 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
-      - key: AEGIS_DATA_DIR
-        value: /opt/render/project/src/code/data
+      - key: DATABASE_URL
+        sync: false
       - key: CONTACT_EMAIL
         sync: false
       - key: STRIPE_SECRET_KEY
@@ -37,7 +39,3 @@ services:
         sync: false
       - key: AEGIS_OWNER_PLAN
         sync: false
-    disk:
-      name: aegis-data
-      mountPath: /opt/render/project/src/code/data
-      sizeGB: 1

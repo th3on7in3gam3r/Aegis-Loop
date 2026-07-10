@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { ProtectEvent, ProtectRule } from '../../types.js';
 import { config } from '../../config.js';
+import { dbConfigured, loadBlob, saveBlob } from '../../db.js';
 import { listScans } from '../../store.js';
 import { BUILTIN_RULES, findingToRule } from './rules.js';
 
@@ -14,6 +15,10 @@ let rules: ProtectRule[] = [];
 let events: ProtectEvent[] = [];
 
 function persistRules(): void {
+  if (dbConfigured()) {
+    saveBlob('protect-rules', rules);
+    return;
+  }
   try {
     mkdirSync(DATA_DIR, { recursive: true });
     writeFileSync(RULES_FILE, JSON.stringify(rules, null, 2));
@@ -23,17 +28,26 @@ function persistRules(): void {
 }
 
 function persistEvents(): void {
+  const trimmed = events.slice(0, 200);
+  events = trimmed;
+  if (dbConfigured()) {
+    saveBlob('protect-events', trimmed);
+    return;
+  }
   try {
     mkdirSync(DATA_DIR, { recursive: true });
-    const trimmed = events.slice(0, 200);
-    events = trimmed;
     writeFileSync(EVENTS_FILE, JSON.stringify(trimmed, null, 2));
   } catch {
     /* keep in memory */
   }
 }
 
-export function loadProtectStore(): void {
+export async function loadProtectStore(): Promise<void> {
+  if (dbConfigured()) {
+    rules = (await loadBlob<ProtectRule[]>('protect-rules')) ?? [...BUILTIN_RULES];
+    events = (await loadBlob<ProtectEvent[]>('protect-events')) ?? [];
+    return;
+  }
   if (existsSync(RULES_FILE)) {
     try {
       rules = JSON.parse(readFileSync(RULES_FILE, 'utf8')) as ProtectRule[];

@@ -2,13 +2,19 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ScanResult } from './types.js';
 import { config } from './config.js';
+import { dbConfigured, loadBlob, saveBlob } from './db.js';
 
 const DATA_DIR = config.dataDir;
 const STORE_FILE = join(DATA_DIR, 'scans.json');
+const BLOB_NAME = 'scans';
 
 const scans = new Map<string, ScanResult>();
 
 function persist(): void {
+  if (dbConfigured()) {
+    saveBlob(BLOB_NAME, listScans());
+    return;
+  }
   try {
     mkdirSync(DATA_DIR, { recursive: true });
     writeFileSync(STORE_FILE, JSON.stringify(listScans(), null, 2));
@@ -17,7 +23,12 @@ function persist(): void {
   }
 }
 
-export function loadStore(): void {
+export async function loadStore(): Promise<void> {
+  if (dbConfigured()) {
+    const data = await loadBlob<ScanResult[]>(BLOB_NAME);
+    if (data) for (const scan of data) scans.set(scan.id, scan);
+    return;
+  }
   if (!existsSync(STORE_FILE)) return;
   try {
     const data = JSON.parse(readFileSync(STORE_FILE, 'utf8')) as ScanResult[];

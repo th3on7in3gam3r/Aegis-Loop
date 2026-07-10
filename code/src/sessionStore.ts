@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from './config.js';
+import { dbConfigured, loadBlob, saveBlob } from './db.js';
 import type { GitHubSession } from './types.js';
 
 /**
@@ -19,7 +20,13 @@ interface StoredSession extends GitHubSession {
 
 const sessions = new Map<string, StoredSession>();
 
+const BLOB_NAME = 'sessions';
+
 function persist(): void {
+  if (dbConfigured()) {
+    saveBlob(BLOB_NAME, [...sessions.values()]);
+    return;
+  }
   try {
     mkdirSync(config.dataDir, { recursive: true });
     writeFileSync(STORE_FILE, JSON.stringify([...sessions.values()]));
@@ -28,16 +35,21 @@ function persist(): void {
   }
 }
 
-export function loadSessionStore(): void {
-  if (!existsSync(STORE_FILE)) return;
-  try {
-    const data = JSON.parse(readFileSync(STORE_FILE, 'utf8')) as StoredSession[];
-    const now = Date.now();
-    for (const s of data) {
-      if (s.expiresAt > now) sessions.set(s.id, s);
+export async function loadSessionStore(): Promise<void> {
+  let data: StoredSession[] | null = null;
+  if (dbConfigured()) {
+    data = await loadBlob<StoredSession[]>(BLOB_NAME);
+  } else if (existsSync(STORE_FILE)) {
+    try {
+      data = JSON.parse(readFileSync(STORE_FILE, 'utf8')) as StoredSession[];
+    } catch {
+      /* corrupt — start fresh; users just re-login */
     }
-  } catch {
-    /* corrupt — start fresh; users just re-login */
+  }
+  if (!data) return;
+  const now = Date.now();
+  for (const s of data) {
+    if (s.expiresAt > now) sessions.set(s.id, s);
   }
 }
 

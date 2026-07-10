@@ -46,6 +46,7 @@ import {
   setSessionCookie,
 } from './session.js';
 import { loadSessionStore } from './sessionStore.js';
+import { dbConfigured } from './db.js';
 import { requireAuth, resolveAuth } from './billing/auth.js';
 import { assertAutofixAccess, assertModuleAccess, canScanRepo, planSummary } from './billing/limits.js';
 import { getAccountForUser, syncOwnerPlan } from './billing/owners.js';
@@ -87,11 +88,11 @@ const LEGAL_DIR = join(ROOT_DIR, 'legal');
 
 const app = Fastify({ logger: true });
 
-loadStore();
-loadProtectStore();
-loadAccountStore();
-loadAnalyticsStore();
-loadSessionStore();
+await loadStore();
+await loadProtectStore();
+await loadAccountStore();
+await loadAnalyticsStore();
+await loadSessionStore();
 
 // Fixed-window per-key rate limiter (in-memory; fine for single instance)
 function makeRateLimiter(limit: number, windowMs: number) {
@@ -293,6 +294,7 @@ app.get('/api/health', async () => ({
     stripe: stripeConfigured(),
     teamPriceMonthly: 29,
   },
+  storage: dbConfigured() ? 'postgres' : 'file',
 }));
 
 app.post('/api/analytics/collect', async (req, reply) => {

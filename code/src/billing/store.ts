@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../config.js';
+import { dbConfigured, loadBlob, saveBlob } from '../db.js';
 import type { PlanId } from './plans.js';
 
 export interface ApiKeyRecord {
@@ -26,7 +27,13 @@ export interface Account {
 const STORE_FILE = join(config.dataDir, 'accounts.json');
 const accounts = new Map<string, Account>();
 
+const BLOB_NAME = 'accounts';
+
 function persist(): void {
+  if (dbConfigured()) {
+    saveBlob(BLOB_NAME, [...accounts.values()]);
+    return;
+  }
   try {
     mkdirSync(config.dataDir, { recursive: true });
     writeFileSync(STORE_FILE, JSON.stringify([...accounts.values()], null, 2));
@@ -35,7 +42,12 @@ function persist(): void {
   }
 }
 
-export function loadAccountStore(): void {
+export async function loadAccountStore(): Promise<void> {
+  if (dbConfigured()) {
+    const data = await loadBlob<Account[]>(BLOB_NAME);
+    if (data) for (const account of data) accounts.set(account.login, account);
+    return;
+  }
   if (!existsSync(STORE_FILE)) return;
   try {
     const data = JSON.parse(readFileSync(STORE_FILE, 'utf8')) as Account[];
