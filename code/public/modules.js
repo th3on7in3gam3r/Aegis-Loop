@@ -213,6 +213,34 @@
     $(`#${prefix}Score`) && (document.getElementById(`${prefix}Score`).textContent = stats?.score ?? '—');
   }
 
+  function attackProbeEmptyMessage(scan) {
+    const target = scan?.target ?? scan?.repo ?? 'target';
+    const score = scan?.stats?.score ?? 100;
+    return `Probe complete for ${target} — score ${score}. No security header issues detected.`;
+  }
+
+  function attackProbeToastMessage(res) {
+    const scans = res.scans ?? [res];
+    if (scans.length > 1) {
+      const clean = scans.filter((s) => s.status === 'complete' && !(s.findings?.length)).length;
+      const issues = scans.filter((s) => (s.findings?.length ?? 0) > 0).length;
+      const failed = scans.filter((s) => s.status === 'failed').length;
+      const parts = [`${scans.length} probes complete`];
+      if (clean) parts.push(`${clean} clean`);
+      if (issues) parts.push(`${issues} with findings`);
+      if (failed) parts.push(`${failed} failed`);
+      return parts.join(' — ');
+    }
+    const scan = scans[0];
+    if (scan?.status === 'failed') return `Probe failed: ${scan.error || 'check the URL'}`;
+    const count = scan.findings?.length ?? 0;
+    const target = scan.target ?? scan.repo ?? 'target';
+    if (!count) {
+      return `Probe complete — ${target} scored ${scan.stats?.score ?? 100} (no issues)`;
+    }
+    return `Probe complete — ${count} finding(s) on ${target}`;
+  }
+
   async function loadCloudScans() {
     cloudScans = await window.aegisApi('/api/cloud/scans');
     return cloudScans;
@@ -285,11 +313,20 @@
       const latest = scans[0];
       if (hasData && latest?.status === 'complete') {
         updateModuleKpis('attackStat', latest);
-        renderModuleFindings($('#attackFindingsList'), latest.findings ?? [], 'No issues detected', 'attack', latest.id);
+        const findings = latest.findings ?? [];
+        renderModuleFindings(
+          $('#attackFindingsList'),
+          findings,
+          attackProbeEmptyMessage(latest),
+          'attack',
+          latest.id
+        );
         window.aegisSetPageContext?.(
           'Offensive testing',
           'Aegis Loop / attack',
-          `${latest.target ?? latest.repo} · score ${latest.stats?.score ?? '—'}`
+          findings.length
+            ? `${latest.target ?? latest.repo} · ${findings.length} finding(s) · score ${latest.stats?.score ?? '—'}`
+            : `${latest.target ?? latest.repo} · probe passed · score ${latest.stats?.score ?? 100}`
         );
       } else if (hasData && latest?.status === 'failed') {
         renderModuleFindings($('#attackFindingsList'), [], latest.error || 'Probe failed', 'attack', latest.id);
@@ -487,8 +524,7 @@ async function switchModule(moduleId) {
       });
       $('#attackProbeModal')?.classList.add('hidden');
       await renderAttackView();
-      const count = res.scans?.length ?? 1;
-      window.aegisToast?.(count > 1 ? `${count} probes complete` : 'Surface probe complete');
+      window.aegisToast?.(attackProbeToastMessage(res));
     } catch (e) {
       window.aegisToast?.(e.message);
     } finally {
