@@ -1,5 +1,4 @@
 import crypto from 'node:crypto';
-import { randomUUID } from 'node:crypto';
 
 export type StudioOpsEventType =
   | 'user.signup'
@@ -9,42 +8,14 @@ export type StudioOpsEventType =
   | 'bundle.updated'
   | 'bundle.canceled';
 
-export interface StudioOpsEventBase {
-  id: string;
-  type: StudioOpsEventType;
-  product: 'aegis';
-  githubLogin: string;
-  email: string | null;
-  occurredAt: string;
-}
-
-export interface StudioOpsUserSignupEvent extends StudioOpsEventBase {
-  type: 'user.signup';
-  authMethod: 'oauth' | 'pat';
-}
-
-export interface StudioOpsSubscriptionEvent extends StudioOpsEventBase {
-  type: 'subscription.upgraded' | 'subscription.canceled';
-  plan: 'team' | 'free';
-  stripeCustomerId?: string;
-  stripeSubscriptionId?: string;
-}
-
-export interface StudioOpsBundleEvent extends StudioOpsEventBase {
-  type: 'bundle.activated' | 'bundle.updated' | 'bundle.canceled';
-  bundleId: string;
-  stripeCustomerId: string;
-  stripeSubscriptionId: string;
-  products: string[];
-}
-
-export type StudioOpsEvent =
-  | StudioOpsUserSignupEvent
-  | StudioOpsSubscriptionEvent
-  | StudioOpsBundleEvent;
-
-function webhookUrl(): string | null {
-  return process.env.STUDIO_OPS_WEBHOOK_URL?.trim() || null;
+/** Prefer STUDIO_OPS_URL (base). Falls back to full STUDIO_OPS_WEBHOOK_URL. */
+function resolveStudioOpsEndpoint(): string | null {
+  const base = process.env.STUDIO_OPS_URL?.trim();
+  if (base) {
+    return `${base.replace(/\/+$/, '')}/api/events`;
+  }
+  const legacy = process.env.STUDIO_OPS_WEBHOOK_URL?.trim();
+  return legacy || null;
 }
 
 function webhookSecret(): string | null {
@@ -52,7 +23,7 @@ function webhookSecret(): string | null {
 }
 
 export function studioOpsConfigured(): boolean {
-  return Boolean(webhookUrl() && webhookSecret());
+  return Boolean(resolveStudioOpsEndpoint() && webhookSecret());
 }
 
 export function signStudioOpsBody(body: string, secret = webhookSecret()): string | null {
@@ -60,25 +31,25 @@ export function signStudioOpsBody(body: string, secret = webhookSecret()): strin
   return crypto.createHmac('sha256', secret).update(body).digest('hex');
 }
 
-export function emitStudioOpsEvent(
-  event: Omit<StudioOpsEvent, 'id' | 'product' | 'occurredAt'> & {
-    id?: string;
-    product?: 'aegis';
-    occurredAt?: string;
-  },
-): void {
-  const url = webhookUrl();
+/** Fire-and-forget — Studio Ops ingest schema (matches Cadence / CitePilot). */
+export function emitStudioOpsEvent(input: {
+  event: StudioOpsEventType;
+  email?: string | null;
+  externalUserId: string;
+  metadata?: Record<string, unknown>;
+}): void {
+  const url = resolveStudioOpsEndpoint();
   const secret = webhookSecret();
   if (!url || !secret) return;
 
-  const payload: StudioOpsEvent = {
-    id: event.id ?? randomUUID(),
-    product: event.product ?? 'aegis',
-    occurredAt: event.occurredAt ?? new Date().toISOString(),
-    ...event,
-  } as StudioOpsEvent;
+  const body = JSON.stringify({
+    product: 'aegis',
+    event: input.event,
+    email: input.email ?? null,
+    externalUserId: input.externalUserId,
+    metadata: input.metadata ?? {},
+  });
 
-  const body = JSON.stringify(payload);
   const signature = signStudioOpsBody(body, secret);
   if (!signature) return;
 
@@ -89,8 +60,9 @@ export function emitStudioOpsEvent(
       'X-Studio-Ops-Signature': signature,
     },
     body,
+    signal: AbortSignal.timeout(10_000),
   }).catch(() => {
-    /* fire-and-forget — Studio Ops must tolerate retries */
+    /* fire-and-forget — Studio Ops must tolerate missed events */
   });
 }
 
@@ -100,10 +72,13 @@ export function emitUserSignup(input: {
   email?: string | null;
 }): void {
   emitStudioOpsEvent({
-    type: 'user.signup',
-    githubLogin: input.githubLogin,
+    event: 'user.signup',
     email: input.email ?? null,
-    authMethod: input.authMethod,
+    externalUserId: input.githubLogin,
+    metadata: {
+      githubLogin: input.githubLogin,
+      authMethod: input.authMethod,
+    },
   });
 }
 
@@ -114,12 +89,15 @@ export function emitSubscriptionUpgraded(input: {
   email?: string | null;
 }): void {
   emitStudioOpsEvent({
-    type: 'subscription.upgraded',
-    githubLogin: input.githubLogin,
+    event: 'subscription.upgraded',
     email: input.email ?? null,
-    plan: 'team',
-    stripeCustomerId: input.stripeCustomerId,
-    stripeSubscriptionId: input.stripeSubscriptionId,
+    externalUserId: input.githubLogin,
+    metadata: {
+      githubLogin: input.githubLogin,
+      plan: 'team',
+      stripeCustomerId: input.stripeCustomerId,
+      stripeSubscriptionId: input.stripeSubscriptionId,
+    },
   });
 }
 
@@ -130,12 +108,15 @@ export function emitSubscriptionCanceled(input: {
   email?: string | null;
 }): void {
   emitStudioOpsEvent({
-    type: 'subscription.canceled',
-    githubLogin: input.githubLogin,
+    event: 'subscription.canceled',
     email: input.email ?? null,
-    plan: 'free',
-    stripeCustomerId: input.stripeCustomerId,
-    stripeSubscriptionId: input.stripeSubscriptionId,
+    externalUserId: input.githubLogin,
+    metadata: {
+      githubLogin: input.githubLogin,
+      plan: 'free',
+      stripeCustomerId: input.stripeCustomerId,
+      stripeSubscriptionId: input.stripeSubscriptionId,
+    },
   });
 }
 
@@ -149,12 +130,15 @@ export function emitBundleStudioOpsEvent(input: {
   email?: string | null;
 }): void {
   emitStudioOpsEvent({
-    type: input.type,
-    githubLogin: input.githubLogin,
+    event: input.type,
     email: input.email ?? null,
-    bundleId: input.bundleId,
-    stripeCustomerId: input.stripeCustomerId,
-    stripeSubscriptionId: input.stripeSubscriptionId,
-    products: input.products,
+    externalUserId: input.githubLogin,
+    metadata: {
+      githubLogin: input.githubLogin,
+      bundleId: input.bundleId,
+      stripeCustomerId: input.stripeCustomerId,
+      stripeSubscriptionId: input.stripeSubscriptionId,
+      products: input.products,
+    },
   });
 }

@@ -107,17 +107,20 @@ function applyPlanChange(
   const prevPlan = account.plan;
   setAccountPlan(login, plan, patch);
 
+  const updated = getAccount(login);
   if (prevPlan !== 'team' && plan === 'team') {
     emitSubscriptionUpgraded({
       githubLogin: login,
-      stripeCustomerId: patch.stripeCustomerId ?? account.stripeCustomerId,
-      stripeSubscriptionId: patch.stripeSubscriptionId ?? account.stripeSubscriptionId,
+      email: updated.email ?? null,
+      stripeCustomerId: patch.stripeCustomerId ?? updated.stripeCustomerId,
+      stripeSubscriptionId: patch.stripeSubscriptionId ?? updated.stripeSubscriptionId,
     });
   } else if (prevPlan === 'team' && plan === 'free') {
     emitSubscriptionCanceled({
       githubLogin: login,
-      stripeCustomerId: patch.stripeCustomerId ?? account.stripeCustomerId,
-      stripeSubscriptionId: patch.stripeSubscriptionId ?? account.stripeSubscriptionId,
+      email: updated.email ?? null,
+      stripeCustomerId: patch.stripeCustomerId ?? updated.stripeCustomerId,
+      stripeSubscriptionId: patch.stripeSubscriptionId ?? updated.stripeSubscriptionId,
     });
   }
 }
