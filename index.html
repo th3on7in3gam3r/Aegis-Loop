@@ -21,6 +21,7 @@
 <meta name="twitter:title" content="Aegis Loop — Find it. Fix it. Ship it.">
 <meta name="twitter:description" content="GitHub-native security scanning with autofix PRs, cloud IaC checks, URL probes, and WAF rule export.">
 <meta name="twitter:image" content="/assets/og-image.png">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <link rel="apple-touch-icon" href="/assets/favicon.png">
 <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM context">
@@ -1982,25 +1983,48 @@
   }, { threshold: 0.5 });
   counters.forEach(el => countIO.observe(el));
 
-  // Contact form — opens mail client (no backend inbox yet)
+  // Contact form — POST to branded email API (falls back gracefully if email not configured)
   const contactForm = document.getElementById('contactForm');
   const contactFormPanel = document.getElementById('contactFormPanel');
   const contactSuccess = document.getElementById('contactSuccess');
   let contactEmail = 'hello@aegisloop.dev';
   if (contactForm) {
-    contactForm.addEventListener('submit', (e) => {
+    contactForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(contactForm);
-      const topic = fd.get('topic') || 'other';
-      const subject = encodeURIComponent(`Aegis Loop: ${topic}`);
-      const body = encodeURIComponent(
-        `Name: ${fd.get('name')}\nEmail: ${fd.get('email')}\nTopic: ${topic}\n\n${fd.get('message')}`
-      );
-      window.location.href = `mailto:${contactEmail}?subject=${subject}&body=${body}`;
-      contactFormPanel.style.display = 'none';
-      contactSuccess.querySelector('p').textContent =
-        "Your email app should open with this message — if it doesn't, write to " + contactEmail + '.';
-      contactSuccess.classList.add('visible');
+      const submitBtn = contactForm.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: fd.get('name'),
+            email: fd.get('email'),
+            topic: fd.get('topic') || 'other',
+            message: fd.get('message'),
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not send message');
+        contactFormPanel.style.display = 'none';
+        contactSuccess.querySelector('p').textContent =
+          "Thanks — we've received your message and sent a confirmation to your inbox. We'll reply within one business day.";
+        contactSuccess.classList.add('visible');
+      } catch (err) {
+        const topic = fd.get('topic') || 'other';
+        const subject = encodeURIComponent(`Aegis Loop: ${topic}`);
+        const body = encodeURIComponent(
+          `Name: ${fd.get('name')}\nEmail: ${fd.get('email')}\nTopic: ${topic}\n\n${fd.get('message')}`
+        );
+        window.location.href = `mailto:${contactEmail}?subject=${subject}&body=${body}`;
+        contactFormPanel.style.display = 'none';
+        contactSuccess.querySelector('p').textContent =
+          "Your email app should open with this message — if it doesn't, write to " + contactEmail + '.';
+        contactSuccess.classList.add('visible');
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
     });
   }
 
