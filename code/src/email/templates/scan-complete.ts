@@ -1,5 +1,6 @@
 import type { AegisModule, ScanResult } from '../../types.js';
-import { EMAIL_BRAND, appDashboardUrl, scanDashboardUrl } from '../config.js';
+import { UTM } from '../../utm.js';
+import { EMAIL_BRAND, appDashboardUrl, marketingSiteUrl, scanDashboardUrl } from '../config.js';
 import {
   buildEmailShell,
   emailBulletList,
@@ -100,6 +101,7 @@ function buildPlainText(input: ScanCompleteEmailInput): string {
   const { scan, topFindings } = input;
   const mod = scan.module ?? 'code';
   const target = scanTargetLabel(scan);
+  const campaign = input.variant === 'score_drop' ? UTM.emailScoreAlert : UTM.emailScanComplete;
   const lines = [
     input.variant === 'score_drop'
       ? `Score alert — ${target}`
@@ -119,8 +121,10 @@ function buildPlainText(input: ScanCompleteEmailInput): string {
     topFindings.forEach((item, i) => lines.push(`${i + 1}. ${item}`));
   }
 
-  lines.push('', `Open scan: ${scanDashboardUrl(scan)}`);
-  lines.push(`Dashboard: ${appDashboardUrl()}`);
+  lines.push('', `Open scan: ${scanDashboardUrl(scan, campaign)}`);
+  lines.push(
+    `Dashboard: ${appDashboardUrl('/app/', { ...campaign, content: 'text-dashboard' })}`
+  );
 
   return lines.join('\n');
 }
@@ -144,6 +148,7 @@ export function buildScanCompleteEmail(input: ScanCompleteEmailInput): {
   const isDrop = input.variant === 'score_drop';
   const target = scanTargetLabel(input.scan);
   const modLabel = MODULE_LABELS[input.scan.module ?? 'code'];
+  const campaign = isDrop ? UTM.emailScoreAlert : UTM.emailScanComplete;
 
   const preheader = isDrop
     ? `${target} dropped to ${input.scan.stats.score}/100 — ${input.topFindings[0] ?? 'review findings in Aegis Loop'}`
@@ -159,12 +164,13 @@ export function buildScanCompleteEmail(input: ScanCompleteEmailInput): {
       bodyHtml,
       primaryColor,
       logoAlt: EMAIL_BRAND.name,
+      footerHref: marketingSiteUrl({ ...UTM.emailFooter, content: isDrop ? 'score-alert' : 'scan-complete' }),
       cta: {
-        href: scanDashboardUrl(input.scan),
+        href: scanDashboardUrl(input.scan, { ...campaign, content: 'cta-primary' }),
         label: 'Open scan results',
       },
       secondaryCta: {
-        href: appDashboardUrl(),
+        href: appDashboardUrl('/app/', { ...campaign, content: 'cta-secondary' }),
         label: 'Open dashboard',
       },
     }),

@@ -27,9 +27,12 @@ describe('buildScanCompleteEmail', () => {
     assert.match(html, /2 critical/);
     assert.match(html, /Hardcoded API key/);
     assert.match(html, /Open scan results/);
+    assert.match(html, /utm_source=aegis/);
+    assert.match(html, /utm_campaign=scan-complete/);
     assert.match(html, /aegis-loop\.com/);
     assert.match(text, /Top findings:/);
     assert.match(text, /1\. Hardcoded API key/);
+    assert.match(text, /utm_source=aegis/);
   });
 
   it('renders score drop variant with alert styling', () => {

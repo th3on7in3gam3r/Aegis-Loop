@@ -25,6 +25,8 @@ export type EmailShellOptions = {
   headerEyebrow?: string;
   footerPrimary?: string;
   footerSecondary?: string;
+  /** Tagged marketing site URL for footer brand link */
+  footerHref?: string;
   cta?: EmailCta;
   secondaryCta?: EmailCta;
 };
@@ -62,9 +64,10 @@ export function buildEmailShell(options: EmailShellOptions): string {
     ? `<p style="margin:16px 0 0;font-size:13px"><a href="${escapeHtml(options.secondaryCta.href)}" style="color:${primary};font-weight:600;text-decoration:none">${escapeHtml(options.secondaryCta.label)} →</a></p>`
     : '';
 
+  const footerHref = escapeHtml(options.footerHref ?? 'https://aegis-loop.com/');
   const footerPrimary = options.footerPrimary
     ? `<p style="margin:0;font-size:12px;color:${MUTED};font-weight:600">${escapeHtml(options.footerPrimary)}</p>`
-    : `<p style="margin:0;font-size:12px;color:${MUTED}">Aegis Loop · <a href="https://aegis-loop.com" style="color:${primary};text-decoration:none">aegis-loop.com</a></p>`;
+    : `<p style="margin:0;font-size:12px;color:${MUTED}">Aegis Loop · <a href="${footerHref}" style="color:${primary};text-decoration:none">aegis-loop.com</a></p>`;
 
   const footerSecondary = options.footerSecondary
     ? `<p style="margin:6px 0 0;font-size:10px;color:#94a3b8">${escapeHtml(options.footerSecondary)}</p>`

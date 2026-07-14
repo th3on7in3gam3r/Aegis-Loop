@@ -1,5 +1,6 @@
 import { config } from '../../config.js';
-import { EMAIL_BRAND, appDashboardUrl } from '../config.js';
+import { UTM } from '../../utm.js';
+import { EMAIL_BRAND, appDashboardUrl, marketingSiteUrl } from '../config.js';
 import { buildEmailShell, escapeHtml } from './base-layout.js';
 
 export type ContactFormInput = {
@@ -26,6 +27,10 @@ export function buildContactConfirmationEmail(input: ContactFormInput): {
   subject: string;
 } {
   const topic = topicLabel(input.topic);
+  const dashUrl = appDashboardUrl('/app/', {
+    ...UTM.emailContactConfirm,
+    content: 'cta-primary',
+  });
   const bodyHtml = `
 <p style="margin:20px 0 0;font-size:15px;line-height:1.6;color:#0f172a">Hi ${escapeHtml(input.name)},</p>
 <p style="margin:16px 0 0;font-size:15px;line-height:1.6;color:#475569">Thanks for reaching out about <strong style="color:#0f172a">${escapeHtml(topic)}</strong>. We've received your message and will reply within one business day.</p>
@@ -47,7 +52,7 @@ export function buildContactConfirmationEmail(input: ContactFormInput): {
     '',
     `We'll reply within one business day. You can also reach us at ${config.contactEmail}.`,
     '',
-    `Dashboard: ${appDashboardUrl()}`,
+    `Dashboard: ${dashUrl}`,
   ].join('\n');
 
   return {
@@ -60,8 +65,12 @@ export function buildContactConfirmationEmail(input: ContactFormInput): {
       bodyHtml,
       primaryColor: EMAIL_BRAND.primaryColor,
       logoAlt: EMAIL_BRAND.name,
+      footerHref: marketingSiteUrl({
+        ...UTM.emailFooter,
+        content: 'contact-confirm',
+      }),
       cta: {
-        href: appDashboardUrl(),
+        href: dashUrl,
         label: 'Open Aegis Loop',
       },
     }),

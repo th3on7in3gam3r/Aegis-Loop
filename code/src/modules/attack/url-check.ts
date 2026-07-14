@@ -1,4 +1,5 @@
 import type { Finding } from '../../types.js';
+import { UTM, withUtm } from '../../utm.js';
 import { scanAttackTarget } from './scanner.js';
 
 export type UrlCheckSummary = {
@@ -23,6 +24,11 @@ function gradeFromScore(score: number): UrlCheckSummary['grade'] {
   return 'D';
 }
 
+/** Landing link shown in Cadence / growth-stack URL check results. */
+function cadenceReportUrl(): string {
+  return withUtm('https://aegis-loop.com/', UTM.cadenceUrlCheck);
+}
+
 export async function summarizeUrlCheck(targetInput: string): Promise<UrlCheckSummary> {
   const scan = await scanAttackTarget(targetInput);
   const findings = scan.findings ?? [];
@@ -42,7 +48,7 @@ export async function summarizeUrlCheck(targetInput: string): Promise<UrlCheckSu
       csp: false,
       findingCount: { critical: 0, warning: 0, info: 0 },
       findings: [],
-      reportUrl: 'https://aegis-loop.com/',
+      reportUrl: cadenceReportUrl(),
       marketerNote:
         'This is a lightweight header check for marketers. Developers should use Aegis Loop for full repo and PR scanning.',
     };
@@ -66,7 +72,7 @@ export async function summarizeUrlCheck(targetInput: string): Promise<UrlCheckSu
       title: f.title,
       message: f.message,
     })),
-    reportUrl: 'https://aegis-loop.com/',
+    reportUrl: cadenceReportUrl(),
     marketerNote:
       'Surface check only — no exploitation. Connect GitHub in Aegis Loop for code, cloud IaC, and autofix PRs.',
   };

@@ -1,5 +1,6 @@
 import { createOctokit } from './client.js';
 import type { PullRequestMeta, ScanResult } from '../types.js';
+import { UTM, withUtm } from '../utm.js';
 
 export async function fetchPullRequest(
   token: string | undefined,
@@ -61,7 +62,7 @@ export function formatPrComment(scan: ScanResult, dashboardUrl: string): string 
     `[View full report in Aegis Loop](${dashboardUrl})`,
     '',
     '---',
-    '*Powered by [Aegis Loop](https://github.com) / code*'
+    `*Powered by [Aegis Loop](${withUtm('https://aegis-loop.com/', UTM.githubPrComment)})*`
   );
 
   return lines.join('\n');

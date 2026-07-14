@@ -3,6 +3,7 @@ import { config } from '../config.js';
 import { scanDirectory } from '../scanner/index.js';
 import { saveScan, updateScanMeta } from '../store.js';
 import { queueScanCompleteEmail } from '../email/notifications.js';
+import { UTM, withUtm } from '../utm.js';
 import { cleanupDir, clonePullRequest } from './clone.js';
 import { fetchPullRequest, publishScanToGitHub } from './pr.js';
 
@@ -34,7 +35,10 @@ async function runPrScan(
     saveScan(scan);
     queueScanCompleteEmail(scan);
 
-    const dashboardUrl = `${config.appUrl}/app/?scan=${scan.id}`;
+    const dashboardUrl = withUtm(
+      `${config.appUrl}/app/?scan=${scan.id}`,
+      UTM.githubPrComment
+    );
     const { commentUrl, statusUrl } = await publishScanToGitHub(token, scan, dashboardUrl);
     updateScanMeta(scan.id, { githubCommentUrl: commentUrl, checkStatusUrl: statusUrl });
 

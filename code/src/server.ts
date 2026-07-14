@@ -76,6 +76,7 @@ import { queueScanCompleteEmail, sendContactEmails } from './email/notifications
 import { isEmailConfigured } from './email/config.js';
 import { isValidRecipientEmail } from './email/send.js';
 import { fetchPrimaryEmail } from './github/client.js';
+import { UTM, withUtm } from './utm.js';
 import {
   appBase,
   injectLandingSeo,
@@ -325,7 +326,7 @@ app.addHook('preParsing', async (request, _reply, payload) => {
 });
 
 function dashboardUrl(scanId: string): string {
-  return `${config.appUrl}/app/?scan=${scanId}`;
+  return withUtm(`${config.appUrl}/app/?scan=${scanId}`, UTM.githubPrComment);
 }
 
 function resolveGithubToken(

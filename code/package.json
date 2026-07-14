@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
-    "test": "node --import tsx --test src/modules/remediation.test.ts src/modules/cloud/scanner.test.ts src/modules/attack/scanner.test.ts src/scanner/rules/bugs.test.ts src/billing/limits.test.ts src/billing/owners.test.ts src/billing/studioOps.test.ts src/db.test.ts src/email/scan-complete.test.ts",
+    "test": "node --import tsx --test src/modules/remediation.test.ts src/modules/cloud/scanner.test.ts src/modules/attack/scanner.test.ts src/scanner/rules/bugs.test.ts src/billing/limits.test.ts src/billing/owners.test.ts src/billing/studioOps.test.ts src/db.test.ts src/email/scan-complete.test.ts src/utm.test.ts",
     "scan:demo": "tsx src/cli.ts fixtures/sample-repo"
   },
   "dependencies": {
