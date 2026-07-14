@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — Aegis Loop</title>
   <meta name="robots" content="noindex, nofollow">
+  <meta name="growth-stack-cadence-url" content="https://cadence.biblefunland.com/app">
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <link rel="icon" type="image/png" href="/assets/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -607,9 +608,14 @@
               <p class="settings-desc">Connect GitHub to scan private repositories, list your repos, and post results to pull requests.</p>
               <div id="settingsGitHub" class="settings-card">Loading…</div>
             </section>
+            <section class="settings-section" id="settingsApiKeysSection">
+              <h3>API keys</h3>
+              <p class="settings-desc">Create a key to paste into Cadence (<strong>Settings → Growth stack API keys</strong>) or GitHub Actions (<code>AEGIS_API_KEY</code>). Keys are shown once at creation — store them securely.</p>
+              <div id="settingsApiKeys" class="settings-card">Loading…</div>
+            </section>
             <section class="settings-section">
               <h3>CI / GitHub Actions</h3>
-              <p class="settings-desc">Scaffold <code>aegis init</code> in your repo, create an API key, and wire GitHub Secrets for PR scans.</p>
+              <p class="settings-desc">Scaffold <code>aegis init</code> in your repo, then use an API key above as <code>AEGIS_API_KEY</code> in GitHub Secrets for PR scans.</p>
               <div id="settingsCi" class="settings-card">Loading…</div>
             </section>
             <section class="settings-section">

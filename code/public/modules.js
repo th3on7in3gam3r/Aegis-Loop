@@ -912,6 +912,17 @@ async function switchModule(moduleId) {
     ['overview', 'cloud', 'attack', 'protect'].forEach((mod) => applyGuideVisibility(mod));
   }
 
+  async function openScanResult(moduleId, scan) {
+    if (!scan?.id) return;
+    if (moduleId === 'cloud') {
+      await ensureCloudModuleVisible();
+      await renderCloudView({ freshScans: [scan], skipFetch: true, scrollToResults: true });
+    } else if (moduleId === 'attack') {
+      await ensureAttackModuleVisible();
+      await renderAttackView({ freshScans: [scan], skipFetch: true, scrollToResults: true });
+    }
+  }
+
   window.AegisModules = {
     switchModule,
     setActiveModule,
@@ -925,6 +936,7 @@ async function switchModule(moduleId) {
     updateCloudDemoUi,
     openCloudScanModal,
     openAttackProbeModal,
+    openScanResult,
     syncProtectRules,
   };
 })();

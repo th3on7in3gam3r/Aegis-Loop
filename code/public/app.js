@@ -108,7 +108,7 @@ npx aegis init</code></pre>
       </ul>
       <p>Commit and push both files to your default branch so GitHub can run the workflow.</p>
       <h4 style="margin:16px 0 8px;font-size:13px">2 — Create an API key</h4>
-      <p>Open <strong>Settings → CI / GitHub Actions</strong> in this dashboard and click <strong>Create key</strong>. Copy the full key immediately — it is only shown once.</p>
+      <p>Open <strong>Settings → API keys</strong> in this dashboard and click <strong>Create for CI</strong>. Copy the full key immediately — it is only shown once.</p>
       <h4 style="margin:16px 0 8px;font-size:13px">3 — Add GitHub Secrets</h4>
       <p>In your repo on GitHub: <strong>Settings → Secrets and variables → Actions → New repository secret</strong></p>
       <ul>
@@ -1325,8 +1325,16 @@ function renderIntegrations() {
         <h3>GitHub Actions (CI)</h3>
         <span class="status-pill on">Available</span>
       </div>
-      <p>Run <code>aegis init</code> in your repo, create an API key in <strong>Settings → CI / GitHub Actions</strong>, and add <code>AEGIS_API_KEY</code> as a GitHub secret. Scans run on every pull request.</p>
+      <p>Run <code>aegis init</code> in your repo, create an API key in <strong>Settings → API keys</strong>, and add <code>AEGIS_API_KEY</code> as a GitHub secret. Scans run on every pull request.</p>
       <button type="button" class="btn-outline btn-sm" id="integrationsCiDocsBtn">CI setup guide</button>
+    </article>
+    <article class="integration-card">
+      <div class="integration-card-head">
+        <h3>Cadence</h3>
+        <span class="status-pill on">Sister product</span>
+      </div>
+      <p>Marketing war room. Create an API key here, then paste it into Cadence <strong>Settings → Growth stack API keys → Aegis Loop</strong> for partner URL / security checks.</p>
+      <button type="button" class="btn-outline btn-sm" id="integrationsApiKeysBtn">Create API key</button>
     </article>
     <article class="integration-card">
       <div class="integration-card-head">
@@ -1376,6 +1384,7 @@ function renderIntegrations() {
 
   $('#integrationsConnectBtn')?.addEventListener('click', openAuthModal);
   $('#integrationsCiDocsBtn')?.addEventListener('click', () => showDocsView('ci'));
+  $('#integrationsApiKeysBtn')?.addEventListener('click', () => showSettingsView({ section: 'keys' }));
 }
 
 function showReposView() {
@@ -1444,16 +1453,22 @@ function showFeedView() {
   history.replaceState(null, '', '/app/');
 }
 
-function showSettingsView() {
+function showSettingsView(opts = {}) {
   currentView = 'settings';
   window.AegisModules?.setActiveModule?.('code');
   hideAllPanels();
   $('#settingsView').classList.remove('hidden');
-  setPageContext('Settings', 'Aegis Loop · Workspace', 'Account, appearance, and scanner configuration');
+  setPageContext('Settings', 'Aegis Loop · Workspace', 'Account, API keys, and scanner configuration');
   setActiveNav('navSettings');
   setModulePill('code');
   renderSettings();
-  history.replaceState(null, '', '/app/?view=settings');
+  const section = opts.section === 'keys' ? 'keys' : '';
+  history.replaceState(null, '', section ? '/app/?view=settings&section=keys' : '/app/?view=settings');
+  if (section === 'keys') {
+    requestAnimationFrame(() => {
+      document.getElementById('settingsApiKeysSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
 }
 
 function showDocsView(sectionId) {
@@ -1489,6 +1504,7 @@ function renderSettings() {
       </div>`;
   }
 
+  renderApiKeysSettings();
   renderCiSettings();
   renderBillingSettings();
 
@@ -1511,71 +1527,144 @@ function renderSettings() {
   updateThemeLabels();
 }
 
-async function renderCiSettings() {
-  const el = $('#settingsCi');
+async function renderApiKeysSettings(opts = {}) {
+  const el = $('#settingsApiKeys');
   if (!el) return;
-  const apiUrl = window.location.origin;
+
+  const cadenceUrl = document.querySelector('meta[name="growth-stack-cadence-url"]')?.content
+    || 'https://cadence.biblefunland.com/app';
+  const cadenceSettings = cadenceUrl.includes('?')
+    ? `${cadenceUrl}&view=settings`
+    : `${cadenceUrl.replace(/\/$/, '')}?view=settings`;
+
   if (!githubUser?.connected) {
-    el.innerHTML = '<p class="settings-hint">Sign in to create API keys for GitHub Actions.</p>';
+    el.innerHTML = '<p class="settings-hint">Sign in to create API keys for Cadence and CI.</p>';
     return;
   }
+
   try {
     const billing = await api('/api/billing/plan');
     const keysHtml = billing.apiKeys?.length
       ? billing.apiKeys.map((k) =>
-          `<li><code>${escapeHtml(k.prefix)}…</code> ${escapeHtml(k.label)} <button type="button" class="btn-sm-outline revoke-key-btn" data-id="${escapeHtml(k.id)}">Revoke</button></li>`
+          `<li>
+            <div class="settings-key-meta">
+              <code>${escapeHtml(k.prefix)}…</code>
+              <span class="settings-key-label">${escapeHtml(k.label)} · created ${escapeHtml(formatKeyDate(k.createdAt))}</span>
+            </div>
+            <button type="button" class="btn-sm-outline revoke-key-btn" data-id="${escapeHtml(k.id)}">Revoke</button>
+          </li>`
         ).join('')
-      : '<li class="settings-hint">No API keys yet</li>';
+      : '<li class="settings-hint" style="border:none;background:transparent;padding:0">No API keys yet</li>';
+
+    const reveal = opts.revealedKey
+      ? `<div class="settings-key-reveal" id="settingsNewKey">
+          <strong>Copy this key now — it won’t be shown again</strong>
+          <code id="settingsNewKeyValue">${escapeHtml(opts.revealedKey)}</code>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button type="button" class="btn-primary btn-sm" id="settingsCopyKeyBtn">Copy key</button>
+            <span class="settings-hint">${opts.revealedHint || 'Store this key securely'}</span>
+          </div>
+        </div>`
+      : '<div id="settingsNewKey" hidden></div>';
 
     el.innerHTML = `
-      <ol class="settings-steps" style="margin:0 0 18px;padding-left:20px;font-size:14px;color:var(--text-secondary);line-height:1.65">
-        <li style="margin-bottom:10px">In your repo root, run <code>aegis init</code> (see commands below) and commit <code>.aegis/</code> + <code>.github/workflows/aegis-loop.yml</code></li>
-        <li style="margin-bottom:10px">Create an API key here → add as <code>AEGIS_API_KEY</code> in GitHub <strong>Settings → Secrets → Actions</strong></li>
-        <li>Optional: set <code>AEGIS_API_URL</code> to <code>${escapeHtml(apiUrl)}</code> if not using the default hosted URL</li>
-        <li>Open a pull request — the workflow scans automatically</li>
-      </ol>
-      <h4 style="font-size:13px;margin:0 0 8px">Init command</h4>
-      <pre class="settings-code" style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;overflow-x:auto;margin:0 0 14px"><code># From a clone until npm publish:
-node /path/to/Aegis-Loop/code/cli/bin/aegis.js init
-
-# After npm publish:
-npx aegis init</code></pre>
-      <div class="settings-row" style="margin-bottom:14px">
-        <div><strong>API keys</strong><span class="settings-hint">Bearer token for <code>/api/ci/scan</code></span></div>
-        <button type="button" class="btn-outline btn-sm" id="settingsCreateKeyBtn">Create key</button>
+      <div class="settings-growth-card">
+        <strong>Cadence (Growth stack)</strong>
+        <p>Create a key → copy it → paste into Cadence <strong>Settings → Growth stack API keys → Aegis Loop</strong>. Enables deeper URL / security checks from the marketing war room.</p>
+        <a class="btn-outline btn-sm" href="${escapeHtml(cadenceSettings)}" target="_blank" rel="noopener">Open Cadence settings</a>
       </div>
-      <ul class="settings-list">${keysHtml}</ul>
-      <p class="settings-hint" id="settingsNewKey" style="margin-top:10px"></p>
-      <button type="button" class="btn-ghost btn-sm" id="settingsOpenCiDocs" style="margin-top:12px">Full CI guide in Documentation →</button>`;
+      <div class="settings-row" style="margin-bottom:14px">
+        <div>
+          <strong>Your keys</strong>
+          <span class="settings-hint">Bearer token for CI scans and Cadence partner calls</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn-primary btn-sm" id="settingsCreateCadenceKeyBtn">Create for Cadence</button>
+          <button type="button" class="btn-outline btn-sm" id="settingsCreateKeyBtn">Create for CI</button>
+        </div>
+      </div>
+      <ul class="settings-keys-list">${keysHtml}</ul>
+      ${reveal}`;
 
-    $('#settingsCreateKeyBtn')?.addEventListener('click', async () => {
+    const createKey = async (label) => {
       try {
-        const res = await api('/api/keys', { method: 'POST', body: JSON.stringify({ label: 'GitHub Actions' }) });
-        $('#settingsNewKey').innerHTML = `New key (copy now): <code style="word-break:break-all">${escapeHtml(res.key)}</code>`;
+        const res = await api('/api/keys', { method: 'POST', body: JSON.stringify({ label }) });
+        const hint = label === 'Cadence'
+          ? 'Paste into Cadence Settings → Growth stack API keys'
+          : 'Add as GitHub secret AEGIS_API_KEY';
         toast('API key created');
-        renderCiSettings();
+        await renderApiKeysSettings({ revealedKey: res.key, revealedHint: hint });
       } catch (err) {
         toast(err.message || 'Could not create key');
       }
+    };
+
+    $('#settingsCreateCadenceKeyBtn')?.addEventListener('click', () => createKey('Cadence'));
+    $('#settingsCreateKeyBtn')?.addEventListener('click', () => createKey('GitHub Actions'));
+    $('#settingsCopyKeyBtn')?.addEventListener('click', async () => {
+      const value = opts.revealedKey || $('#settingsNewKeyValue')?.textContent;
+      if (!value) return;
+      try {
+        await navigator.clipboard.writeText(value);
+        toast('API key copied');
+      } catch {
+        toast('Could not copy — select the key manually');
+      }
     });
-    $('#settingsOpenCiDocs')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      showDocsView('ci');
-    });
+
     el.querySelectorAll('.revoke-key-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
         try {
           await api(`/api/keys/${btn.dataset.id}`, { method: 'DELETE' });
           toast('API key revoked');
-          renderCiSettings();
+          renderApiKeysSettings();
         } catch (err) {
           toast(err.message || 'Could not revoke key');
         }
       });
     });
   } catch (e) {
-    el.innerHTML = `<p class="settings-hint">${escapeHtml(e.message || 'Could not load CI settings')}</p>`;
+    el.innerHTML = `<p class="settings-hint">${escapeHtml(e.message || 'Could not load API keys')}</p>`;
   }
+}
+
+function formatKeyDate(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch {
+    return '—';
+  }
+}
+
+async function renderCiSettings() {
+  const el = $('#settingsCi');
+  if (!el) return;
+  const apiUrl = window.location.origin;
+  el.innerHTML = `
+    <ol class="settings-steps" style="margin:0 0 14px;padding-left:20px;font-size:14px;color:var(--text-secondary);line-height:1.65">
+      <li style="margin-bottom:10px">In your repo root, run <code>aegis init</code> and commit <code>.aegis/</code> + <code>.github/workflows/aegis-loop.yml</code></li>
+      <li style="margin-bottom:10px">Create an API key in <strong>API keys</strong> above → add as <code>AEGIS_API_KEY</code> in GitHub <strong>Settings → Secrets → Actions</strong></li>
+      <li>Optional: set <code>AEGIS_API_URL</code> to <code>${escapeHtml(apiUrl)}</code> if not using the default hosted URL</li>
+      <li>Open a pull request — the workflow scans automatically</li>
+    </ol>
+    <h4 style="font-size:13px;margin:0 0 8px">Init command</h4>
+    <pre class="settings-code" style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;overflow-x:auto;margin:0 0 14px"><code># From a clone until npm publish:
+node /path/to/Aegis-Loop/code/cli/bin/aegis.js init
+
+# After npm publish:
+npx aegis init</code></pre>
+    <button type="button" class="btn-ghost btn-sm" id="settingsOpenCiDocs">Full CI guide in Documentation →</button>
+    <button type="button" class="btn-ghost btn-sm" id="settingsJumpApiKeys" style="margin-left:8px">↑ API keys</button>`;
+
+  $('#settingsOpenCiDocs')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showDocsView('ci');
+  });
+  $('#settingsJumpApiKeys')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('settingsApiKeysSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 }
 
 async function renderBillingSettings() {
@@ -2620,6 +2709,14 @@ loadAuth().then(async () => {
   const scanId = params.get('scan');
   if (moduleParam && ['cloud', 'attack', 'protect'].includes(moduleParam)) {
     await window.AegisModules?.switchModule(moduleParam);
+    if (scanId && moduleParam !== 'protect') {
+      try {
+        const path = moduleParam === 'cloud' ? `/api/cloud/scans/${scanId}` : `/api/attack/scans/${scanId}`;
+        await window.AegisModules?.openScanResult?.(moduleParam, await api(path));
+      } catch {
+        /* scan link expired or wrong module */
+      }
+    }
     refreshHistory();
   } else if (scanId) {
     try {
@@ -2628,7 +2725,7 @@ loadAuth().then(async () => {
       refreshHistory();
     }
   } else if (view === 'settings') {
-    showSettingsView();
+    showSettingsView({ section: params.get('section') === 'keys' ? 'keys' : undefined });
     refreshHistory();
   } else if (view === 'docs') {
     showDocsView(params.get('section') ?? undefined);

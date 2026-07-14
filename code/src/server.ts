@@ -53,8 +53,10 @@ import { getAccountForUser, syncOwnerPlan } from './billing/owners.js';
 import {
   createApiKey,
   accountExists,
+  getAccount,
   loadAccountStore,
   revokeApiKey,
+  setAccountEmail,
 } from './billing/store.js';
 import { emitUserSignup } from './billing/studioOps.js';
 import {
@@ -70,6 +72,10 @@ import {
   type StudioBillingPartnerEvent,
 } from './billing/studioPartner.js';
 import { getScan, listScans, loadStore, saveScan, updateFinding, updateScanMeta } from './store.js';
+import { queueScanCompleteEmail, sendContactEmails } from './email/notifications.js';
+import { isEmailConfigured } from './email/config.js';
+import { isValidRecipientEmail } from './email/send.js';
+import { fetchPrimaryEmail } from './github/client.js';
 import {
   appBase,
   injectLandingSeo,
@@ -114,6 +120,7 @@ const urlCheckRateOk = makeRateLimiter(10, 60_000);
 const scanRateOk = makeRateLimiter(12, 60_000);
 const authRateOk = makeRateLimiter(10, 60_000);
 const demoPreviewRateOk = makeRateLimiter(20, 60_000);
+const contactRateOk = makeRateLimiter(5, 60_000);
 
 let demoPreviewCache: { at: number; scan: import('./types.js').ScanResult } | null = null;
 const DEMO_PREVIEW_TTL_MS = 10 * 60_000;
@@ -125,6 +132,16 @@ function rateLimited(reply: import('fastify').FastifyReply) {
 function tagScan<T extends import('./types.js').ScanResult>(scan: T, login: string): T {
   scan.userLogin = login;
   return scan;
+}
+
+function persistScan(scan: import('./types.js').ScanResult): void {
+  saveScan(scan);
+  queueScanCompleteEmail(scan);
+}
+
+async function syncAccountEmail(login: string, token: string): Promise<void> {
+  const email = await fetchPrimaryEmail(token);
+  if (email) setAccountEmail(login, email);
 }
 
 function assertScanAccess(
@@ -356,7 +373,40 @@ app.get('/api/health', async () => ({
     teamPriceMonthly: 29,
   },
   storage: dbConfigured() ? 'postgres' : 'file',
+  email: { configured: isEmailConfigured() },
 }));
+
+app.post('/api/contact', async (req, reply) => {
+  if (!contactRateOk(req.ip || 'unknown')) return rateLimited(reply);
+
+  const body = req.body as {
+    name?: string;
+    email?: string;
+    topic?: string;
+    message?: string;
+  };
+
+  const name = body.name?.trim();
+  const email = body.email?.trim();
+  const topic = body.topic?.trim() || 'other';
+  const message = body.message?.trim();
+
+  if (!name || !email || !message) {
+    return reply.status(400).send({ error: 'name, email, and message are required' });
+  }
+  if (!isValidRecipientEmail(email)) {
+    return reply.status(400).send({ error: 'Invalid email address' });
+  }
+  if (message.length > 5000) {
+    return reply.status(400).send({ error: 'Message is too long' });
+  }
+
+  const result = await sendContactEmails({ name, email, topic, message });
+  if (!result.ok) {
+    return reply.status(503).send({ error: result.error ?? 'Could not send message' });
+  }
+  return { ok: true };
+});
 
 app.get('/api/demo/preview', async (req, reply) => {
   if (!demoPreviewRateOk(req.ip || 'unknown')) return rateLimited(reply);
@@ -427,15 +477,25 @@ app.get('/api/auth/github', async (_req, reply) => {
   return reply.redirect(startOAuth(reply));
 });
 
-function registerAuthenticatedUser(
+/** Ensures account exists; returns true when this is a first-time login. */
+function registerAuthenticatedUser(login: string): boolean {
+  const isNew = !accountExists(login);
+  syncOwnerPlan(login);
+  return isNew;
+}
+
+function emitSignupIfNew(
+  isNew: boolean,
   login: string,
   authMethod: 'oauth' | 'pat',
 ): void {
-  const isNew = !accountExists(login);
-  syncOwnerPlan(login);
-  if (isNew) {
-    emitUserSignup({ githubLogin: login, authMethod, email: null });
-  }
+  if (!isNew) return;
+  const account = getAccount(login);
+  emitUserSignup({
+    githubLogin: login,
+    authMethod,
+    email: account.email ?? null,
+  });
 }
 
 app.get('/api/auth/github/callback', async (req, reply) => {
@@ -447,7 +507,9 @@ app.get('/api/auth/github/callback', async (req, reply) => {
 
   try {
     const session = await exchangeCode(code);
-    registerAuthenticatedUser(session.login, 'oauth');
+    const isNew = registerAuthenticatedUser(session.login);
+    await syncAccountEmail(session.login, session.token);
+    emitSignupIfNew(isNew, session.login, 'oauth');
     setSessionCookie(reply, session);
     return reply.redirect('/app/?auth=success');
   } catch (err) {
@@ -465,7 +527,9 @@ app.post('/api/auth/pat', async (req, reply) => {
 
   try {
     const session = await sessionFromPat(token.trim());
-    registerAuthenticatedUser(session.login, 'pat');
+    const isNew = registerAuthenticatedUser(session.login);
+    await syncAccountEmail(session.login, session.token);
+    emitSignupIfNew(isNew, session.login, 'pat');
     setSessionCookie(reply, session);
     return { connected: true, login: session.login, avatarUrl: session.avatarUrl };
   } catch (err) {
@@ -509,7 +573,7 @@ app.post('/api/scans/demo', async (req, reply) => {
   const auth = requireAuth(req, reply);
   if (!auth) return;
   const scan = tagScan(await scanDirectory(config.demoRepo, 'aegis-loop/sample-app', 'main'), auth.login);
-  saveScan(scan);
+  persistScan(scan);
   return scan;
 });
 
@@ -536,7 +600,7 @@ app.post('/api/scans', async (req, reply) => {
       await scanDirectory(tempDir, repoName, body.branch ?? 'main'),
       auth.login
     );
-    saveScan(scan);
+    persistScan(scan);
     return scan;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Scan failed';
@@ -581,7 +645,7 @@ app.post('/api/scans/pull-request', async (req, reply) => {
     tempDir = await clonePullRequest(owner, repo, pr.headBranch, token);
     const scan = tagScan(await scanDirectory(tempDir, repoName, pr.headBranch), auth.login);
     scan.pullRequest = pr;
-    saveScan(scan);
+    persistScan(scan);
 
     const shouldPublish = body.publish !== false && Boolean(token);
     if (shouldPublish && token) {
@@ -757,7 +821,7 @@ app.post('/api/cloud/scans/demo', async (req, reply) => {
     await scanCloudDirectory(config.cloudDemoRepo, 'aegis-loop/cloud-demo', 'main'),
     auth.login
   );
-  saveScan(scan);
+  persistScan(scan);
   syncProtectRulesFromScans(auth.login);
   return scan;
 });
@@ -788,7 +852,7 @@ app.post('/api/cloud/scans', async (req, reply) => {
       await scanCloudDirectory(tempDir, repoName, body.branch ?? 'main'),
       auth.login
     );
-    saveScan(scan);
+    persistScan(scan);
     syncProtectRulesFromScans(auth.login);
     return scan;
   } catch (err) {
@@ -832,7 +896,7 @@ app.post('/api/attack/scans', async (req, reply) => {
   try {
     if (multi?.length) {
       const scans = (await scanAttackTargets(multi)).map((s) => tagScan(s, auth.login));
-      for (const scan of scans) saveScan(scan);
+      for (const scan of scans) persistScan(scan);
       syncProtectRulesFromScans(auth.login);
       return { scans, count: scans.length };
     }
@@ -840,7 +904,7 @@ app.post('/api/attack/scans', async (req, reply) => {
       return reply.status(400).send({ error: 'target, url, or targets[] is required' });
     }
     const scan = tagScan(await scanAttackTarget(single), auth.login);
-    saveScan(scan);
+    persistScan(scan);
     syncProtectRulesFromScans(auth.login);
     return scan;
   } catch (err) {
@@ -885,7 +949,7 @@ app.post('/api/ci/scan', async (req, reply) => {
       tempDir = await clonePullRequest(owner, repo, pr.headBranch, token);
       const scan = tagScan(await scanDirectory(tempDir, repoName, pr.headBranch), auth.login);
       scan.pullRequest = pr;
-      saveScan(scan);
+      persistScan(scan);
       const { commentUrl, statusUrl } = await publishScanToGitHub(token, scan, dashboardUrl(scan.id));
       updateScanMeta(scan.id, { githubCommentUrl: commentUrl, checkStatusUrl: statusUrl });
       return { scanId: scan.id, findings: scan.findings.length, score: scan.stats.score, commentUrl };
@@ -893,7 +957,7 @@ app.post('/api/ci/scan', async (req, reply) => {
 
     tempDir = await cloneRepo(owner, repo, body.branch ?? 'main', token);
     const scan = tagScan(await scanDirectory(tempDir, repoName, body.branch ?? 'main'), auth.login);
-    saveScan(scan);
+    persistScan(scan);
     return { scanId: scan.id, findings: scan.findings.length, score: scan.stats.score };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'CI scan failed';
@@ -995,7 +1059,7 @@ app.post('/api/keys', async (req, reply) => {
     return reply.status(403).send({ error: 'Create API keys from the dashboard while signed in' });
   }
   const body = (req.body ?? {}) as { label?: string };
-  const { key, record } = createApiKey(auth.login, body.label?.trim() || 'CI');
+  const { key, record } = createApiKey(auth.login, body.label?.trim() || 'API key');
   return {
     key,
     record: { id: record.id, label: record.label, prefix: record.prefix, createdAt: record.createdAt },

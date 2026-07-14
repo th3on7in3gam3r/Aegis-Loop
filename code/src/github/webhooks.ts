@@ -2,6 +2,7 @@ import { Webhooks } from '@octokit/webhooks';
 import { config } from '../config.js';
 import { scanDirectory } from '../scanner/index.js';
 import { saveScan, updateScanMeta } from '../store.js';
+import { queueScanCompleteEmail } from '../email/notifications.js';
 import { cleanupDir, clonePullRequest } from './clone.js';
 import { fetchPullRequest, publishScanToGitHub } from './pr.js';
 
@@ -31,6 +32,7 @@ async function runPrScan(
     scan.pullRequest = pr;
     scan.userLogin = userLogin;
     saveScan(scan);
+    queueScanCompleteEmail(scan);
 
     const dashboardUrl = `${config.appUrl}/app/?scan=${scan.id}`;
     const { commentUrl, statusUrl } = await publishScanToGitHub(token, scan, dashboardUrl);

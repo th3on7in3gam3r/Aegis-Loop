@@ -18,6 +18,19 @@ export async function verifyToken(token: string): Promise<{
   };
 }
 
+export async function fetchPrimaryEmail(token: string): Promise<string | null> {
+  const octokit = createOctokit(token);
+  try {
+    const { data } = await octokit.users.listEmailsForAuthenticatedUser();
+    const primary = data.find((e) => e.primary && e.verified);
+    if (primary?.email) return primary.email;
+    const verified = data.find((e) => e.verified);
+    return verified?.email ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function listUserRepos(token: string) {
   const octokit = createOctokit(token);
   const repos: Array<{

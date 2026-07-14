@@ -31,7 +31,7 @@ export function startOAuth(reply: FastifyReply): string {
   const params = new URLSearchParams({
     client_id: config.github.clientId,
     redirect_uri: `${config.appUrl}/api/auth/github/callback`,
-    scope: 'repo read:user',
+    scope: 'repo read:user user:email',
     state,
   });
 

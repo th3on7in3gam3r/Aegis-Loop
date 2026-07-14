@@ -16,6 +16,8 @@ export interface ApiKeyRecord {
 export interface Account {
   login: string;
   plan: PlanId;
+  email?: string;
+  scanEmailAlerts?: boolean;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   seats?: number;
@@ -83,6 +85,12 @@ export function saveAccount(account: Account): Account {
   accounts.set(account.login, account);
   persist();
   return account;
+}
+
+export function setAccountEmail(login: string, email: string | null): Account {
+  const account = getAccount(login);
+  account.email = email?.trim() || undefined;
+  return saveAccount(account);
 }
 
 export function setAccountPlan(
