@@ -2080,9 +2080,11 @@ function closeAutofixPanel() {
 
 function setAutofixPanelMode(mode) {
   const success = mode === 'success';
+  const failed = mode === 'failed';
   $('#autofixSuccess')?.classList.toggle('hidden', !success);
   $('#autofixReview')?.classList.toggle('hidden', success);
-  $('#applyFixBtn')?.classList.toggle('hidden', success);
+  $('#applyFixBtn')?.classList.toggle('hidden', success || failed);
+  $('#retryAiFixBtn')?.classList.toggle('hidden', !failed);
   $('#autofixDoneBtn')?.classList.toggle('hidden', !success);
   $('#panelHint')?.classList.toggle('hidden', success);
 }
@@ -2147,6 +2149,7 @@ function populateAutofixPanel(finding, autofix, aiGenerated) {
 
   const canApply = Boolean(autofix?.patchedFile || finding.autofix?.patchedFile || llmAvailable);
   $('#applyFixBtn').classList.toggle('hidden', !canApply);
+  $('#retryAiFixBtn')?.classList.add('hidden');
   $('#applyFixBtn').disabled = false;
   $('#applyFixBtn').textContent = 'Apply AutoFix';
 }
@@ -2203,8 +2206,10 @@ async function openAutofixPanel(findingId, scanId) {
     else renderFindingsTable(allFindings);
   } catch (e) {
     $('#panelAfter').textContent = `Could not generate AI fix: ${e.message}`;
-    $('#panelDesc').textContent = `${f.message} — use the manual prompt below or fix in your editor.`;
-    $('#applyFixBtn').classList.add('hidden');
+    $('#panelDesc').textContent = `${f.message} — use Retry after fixing the LLM key/model, or copy the manual prompt below.`;
+    $('#panelHint').textContent =
+      'Apply stays hidden until a patch is generated. Check ANTHROPIC_API_KEY / ANTHROPIC_MODEL on the server, then Retry.';
+    setAutofixPanelMode('failed');
     toast(e.message);
   } finally {
     $('#applyFixBtn').disabled = false;
@@ -2536,6 +2541,10 @@ document.addEventListener('keydown', (e) => {
   closeTopModal();
 });
 $('#applyFixBtn').addEventListener('click', applyAutofix);
+$('#retryAiFixBtn')?.addEventListener('click', () => {
+  if (!activeFinding) return;
+  openAutofixPanel(activeFinding.id, currentScan?.id);
+});
 $('#autofixDoneBtn')?.addEventListener('click', () => closeAutofixPanel());
 $('#bulkScanBtn').addEventListener('click', runBulkScan);
 $('#copyManualPromptBtn').addEventListener('click', () => {

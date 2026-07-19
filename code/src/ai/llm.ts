@@ -83,9 +83,20 @@ async function callAnthropic(system: string, user: string): Promise<string> {
 
   const data = (await res.json()) as {
     content?: Array<{ text?: string }>;
-    error?: { message?: string };
+    error?: { message?: string; type?: string } | string;
   };
-  if (!res.ok) throw new Error(data.error?.message ?? 'Anthropic API error');
+  if (!res.ok) {
+    const detail =
+      (typeof data.error === 'string' ? data.error : data.error?.message) ||
+      `Anthropic API error (${res.status})`;
+    // Common case: invalid/unavailable model id surfaces as "model: …"
+    if (/^model:/i.test(detail) || (res.status === 404 && /model/i.test(detail))) {
+      throw new Error(
+        `AI model unavailable (${config.ai.anthropicModel}). Check ANTHROPIC_API_KEY billing/access and ANTHROPIC_MODEL on the server.`
+      );
+    }
+    throw new Error(detail);
+  }
   return data.content?.[0]?.text ?? '';
 }
 

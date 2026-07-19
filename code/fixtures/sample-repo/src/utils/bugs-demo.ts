@@ -20,3 +20,11 @@ export function loadConfig() {
 export function failFast() {
   throw 'config missing';
 }
+
+export function gateByFlag(flag: boolean | string) {
+  // Intentional demo bug — assignment instead of comparison
+  if ((flag = true)) {
+    return 'on';
+  }
+  return 'off';
+}

@@ -18,6 +18,14 @@ function codeOnly(line: string): string {
   return code;
 }
 
+/** Detect `=` assignment inside `if (...)`, ignoring == === != !== >= <= =>. */
+export function hasAssignmentInIfCondition(code: string): boolean {
+  const match = code.match(/\bif\s*\(([^)]*)\)/);
+  if (!match) return false;
+  // Single = not preceded by = ! < > and not followed by = or >
+  return /(?<![=!<>])=(?![=>])/.test(match[1]);
+}
+
 function buildPatchedFile(lines: string[], lineIndex: number, newLine: string): string {
   const patched = [...lines];
   patched[lineIndex] = newLine;
@@ -142,7 +150,7 @@ export const bugsRule: ScanRule = {
           });
         }
 
-        if (/\bif\s*\(\s*[^=!<>][^)]*=(?!=)/.test(code)) {
+        if (hasAssignmentInIfCondition(code)) {
           push({
             severity: 'warning',
             ruleId: 'bug/assignment-in-condition',
@@ -150,7 +158,7 @@ export const bugsRule: ScanRule = {
             file,
             line: i + 1,
             message:
-              'Using = inside an if condition is usually a typo for === or ===. It assigns and always truth-checks the assigned value.',
+              'Using = inside an if condition is usually a typo for == or ===. It assigns and always truth-checks the assigned value.',
             snippet: line.trim(),
           });
         }
