@@ -1333,7 +1333,17 @@
           </div>
           <div class="diff">
             <div><span class="diff-label">Before</span><pre id="panelBefore"></pre></div>
-            <div><span class="diff-label">After</span><pre id="panelAfter"></pre></div>
+            <div>
+              <span class="diff-label">After</span>
+              <div id="autofixGenerating" class="autofix-generating hidden" role="status" aria-live="polite">
+                <span class="spinner" aria-hidden="true"></span>
+                <div>
+                  <strong>Generating AI fix…</strong>
+                  <p>Calling the model for a patch. Apply stays disabled until this finishes.</p>
+                </div>
+              </div>
+              <pre id="panelAfter"></pre>
+            </div>
           </div>
           <div class="manual-fix-section">
             <h4>Fix it yourself</h4>

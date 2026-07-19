@@ -1814,13 +1814,15 @@ async function logout() {
 
 // ── Feed rendering ──
 
-function renderScan(scan) {
+function renderScan(scan, opts = {}) {
   currentScan = scan;
-  allFindings = scan.findings ?? [];
-  $('#findingsSearchInput').value = '';
+  // Keep Findings search when returning from A-Fix apply, etc.
+  if (!opts.keepFindingsSearch) {
+    $('#findingsSearchInput').value = '';
+  }
 
   if (currentView === 'findings') {
-    showFindingsView();
+    showFindingsView({ keepSearch: Boolean(opts.keepFindingsSearch) });
   } else if (currentView === 'repos') {
     showReposView();
     repoScanMap[scan.repo] = scan;
@@ -1843,7 +1845,14 @@ function renderScan(scan) {
 
   refreshHistory();
   renderHomeChecklist();
-  history.replaceState(null, '', `/app/?scan=${scan.id}${currentView !== 'feed' ? `&view=${currentView}` : ''}`);
+  // showFindingsView already sets the Findings URL (including repo search); don't clobber it.
+  if (currentView !== 'findings') {
+    history.replaceState(
+      null,
+      '',
+      `/app/?scan=${scan.id}${currentView !== 'feed' ? `&view=${currentView}` : ''}`
+    );
+  }
 }
 
 function findingRepoLabel(repo, mod) {
@@ -2084,6 +2093,7 @@ function closeAutofixPanel() {
 function setAutofixPanelMode(mode) {
   const success = mode === 'success';
   const failed = mode === 'failed';
+  if (success || failed) setAutofixGenerating(false);
   $('#autofixSuccess')?.classList.toggle('hidden', !success);
   $('#autofixReview')?.classList.toggle('hidden', success);
   $('#applyFixBtn')?.classList.toggle('hidden', success || failed);
@@ -2121,8 +2131,22 @@ function showAutofixSuccess(result) {
   $('#panelTitle').textContent = 'Applied';
 }
 
+function setAutofixGenerating(on) {
+  $('#autofixGenerating')?.classList.toggle('hidden', !on);
+  const btn = $('#applyFixBtn');
+  if (!btn) return;
+  if (on) {
+    btn.classList.remove('hidden');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Generating AI fix…';
+    $('#retryAiFixBtn')?.classList.add('hidden');
+    $('#panelHint').textContent = 'Hang tight — Apply unlocks after the AI patch is ready.';
+  }
+}
+
 function populateAutofixPanel(finding, autofix, aiGenerated) {
   setAutofixPanelMode('review');
+  setAutofixGenerating(false);
   panelAiGenerated = aiGenerated;
   const isBug = isBugFinding(finding);
   $('#panelTitle').textContent = finding.title;
@@ -2150,8 +2174,9 @@ function populateAutofixPanel(finding, autofix, aiGenerated) {
     ? 'Apply pushes a commit to the PR branch. You’ll get a success screen with the commit link.'
     : 'Apply opens an autofix PR on GitHub (demo repos are marked fixed locally only). You’ll see a confirmation here.';
 
-  const canApply = Boolean(autofix?.patchedFile || finding.autofix?.patchedFile || llmAvailable);
-  $('#applyFixBtn').classList.toggle('hidden', !canApply);
+  // Only enable Apply when a real patch exists — not merely because LLM is configured.
+  const hasPatch = Boolean(autofix?.patchedFile || finding.autofix?.patchedFile);
+  $('#applyFixBtn').classList.toggle('hidden', !hasPatch);
   $('#retryAiFixBtn')?.classList.add('hidden');
   $('#applyFixBtn').disabled = false;
   $('#applyFixBtn').textContent = 'Apply AutoFix';
@@ -2177,7 +2202,7 @@ async function openAutofixPanel(findingId, scanId) {
   showAutofixPanel();
   populateAutofixPanel(f, f.autofix, false);
 
-  if (f.autofix) return;
+  if (f.autofix?.patchedFile) return;
 
   if (!llmAvailable) {
     $('#panelAfter').textContent = f.remediation?.steps?.length
@@ -2187,12 +2212,14 @@ async function openAutofixPanel(findingId, scanId) {
     return;
   }
 
-  if (f.remediation?.steps?.length && !f.autofix) {
-    $('#panelAfter').textContent = `${f.remediation.steps.map((step, i) => `${i + 1}. ${step}`).join('\n\n')}\n\n— Generating AI fix…`;
+  if (f.remediation?.steps?.length) {
+    $('#panelAfter').textContent = f.remediation.steps
+      .map((step, i) => `${i + 1}. ${step}`)
+      .join('\n\n');
   } else {
-    $('#panelAfter').textContent = 'Generating AI fix…';
+    $('#panelAfter').textContent = 'Waiting for AI patch…';
   }
-  $('#applyFixBtn').disabled = true;
+  setAutofixGenerating(true);
 
   try {
     const result = await api(
@@ -2204,18 +2231,21 @@ async function openAutofixPanel(findingId, scanId) {
       currentScan.findings[idx] = { ...currentScan.findings[idx], autofix: result.autofix };
       activeFinding = currentScan.findings[idx];
     }
+    setAutofixGenerating(false);
     populateAutofixPanel(activeFinding, result.autofix, true);
-    if (currentView === 'findings') showFindingsView({ keepSearch: true });
-    else filterFindings();
+    if (currentView === 'findings') {
+      showFindingsView({ keepSearch: true });
+    } else {
+      filterFindings();
+    }
   } catch (e) {
+    setAutofixGenerating(false);
     $('#panelAfter').textContent = `Could not generate AI fix: ${e.message}`;
     $('#panelDesc').textContent = `${f.message} — use Retry after fixing the LLM key/model, or copy the manual prompt below.`;
     $('#panelHint').textContent =
       'Apply stays hidden until a patch is generated. Check ANTHROPIC_API_KEY / ANTHROPIC_MODEL on the server, then Retry.';
     setAutofixPanelMode('failed');
     toast(e.message);
-  } finally {
-    $('#applyFixBtn').disabled = false;
   }
 }
 
@@ -2460,7 +2490,7 @@ async function applyAutofix() {
       { method: 'POST', body: JSON.stringify({ createPr: true }) }
     );
     const updated = await api(`/api/scans/${currentScan.id}`);
-    renderScan(updated);
+    renderScan(updated, { keepFindingsSearch: true });
     showAutofixSuccess(result);
     toast(result.message || 'Fix applied');
   } catch (e) {

@@ -1273,6 +1273,19 @@ button.sev-badge.sev-filter-btn.active {
 }
 .modal-form { display: flex; flex-direction: column; }
 .autofix-hint { font-size: 12px; color: var(--text-3); line-height: 1.45; }
+.autofix-generating {
+  display: flex; align-items: flex-start; gap: 10px;
+  margin-bottom: 10px; padding: 12px 14px; border-radius: 8px;
+  background: var(--violet-dim); border: 1px solid rgba(124,58,237,0.28);
+}
+.autofix-generating.hidden { display: none; }
+.autofix-generating .spinner { margin-top: 2px; color: var(--violet); }
+.autofix-generating strong {
+  display: block; font-size: 13px; color: var(--text); margin-bottom: 2px;
+}
+.autofix-generating p {
+  margin: 0; font-size: 12px; line-height: 1.45; color: var(--text-3);
+}
 .autofix-review { display: flex; flex-direction: column; gap: 16px; }
 .autofix-success {
   display: flex; flex-direction: column; align-items: stretch; gap: 12px;
