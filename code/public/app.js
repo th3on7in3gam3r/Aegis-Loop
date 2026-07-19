@@ -13,6 +13,7 @@ let bulkScanning = false;
 let panelAiGenerated = false;
 let healthInfo = null;
 let findingsSeverityFilter = null;
+let findingsStatusFilter = 'open'; // open | fixed | all
 
 const DEMO_REPO = 'aegis-loop/sample-app';
 const CLOUD_DEMO_REPO = 'aegis-loop/cloud-demo';
@@ -1871,7 +1872,9 @@ function renderFindingsTable(findings, opts = {}) {
       msg = codeScanEmptyMsg();
     } else if (opts.empty === 'error') {
       msg = 'Could not load findings. Try refreshing the page.';
-    } else if (!$('#findingsSearchInput')?.value.trim() && !findingsSeverityFilter) {
+    } else if (findingsStatusFilter === 'fixed' && !findingsSeverityFilter && !$('#findingsSearchInput')?.value.trim()) {
+      msg = 'No fixed findings yet — apply an A-Fix and it will show up here.';
+    } else if (findingsStatusFilter === 'open' && !findingsSeverityFilter && !$('#findingsSearchInput')?.value.trim()) {
       msg = 'No open findings — your workspace looks clean.';
     } else if (findingsSeverityFilter) {
       msg = `No ${sevLabel(findingsSeverityFilter).toLowerCase()} findings match your filters.`;
@@ -2202,8 +2205,8 @@ async function openAutofixPanel(findingId, scanId) {
       activeFinding = currentScan.findings[idx];
     }
     populateAutofixPanel(activeFinding, result.autofix, true);
-    if (currentView === 'findings') showFindingsView();
-    else renderFindingsTable(allFindings);
+    if (currentView === 'findings') showFindingsView({ keepSearch: true });
+    else filterFindings();
   } catch (e) {
     $('#panelAfter').textContent = `Could not generate AI fix: ${e.message}`;
     $('#panelDesc').textContent = `${f.message} — use Retry after fixing the LLM key/model, or copy the manual prompt below.`;
@@ -2270,10 +2273,52 @@ function openIssuesModal(repoFullName) {
   $('#issuesModal').classList.remove('hidden');
 }
 
+function updateFindingsStatusTabs() {
+  const source = allFindings ?? [];
+  const open = source.filter((f) => !f.fixed).length;
+  const fixed = source.filter((f) => f.fixed).length;
+  const all = source.length;
+  const openEl = $('#findingsOpenCount');
+  const fixedEl = $('#findingsFixedCount');
+  const allEl = $('#findingsAllCount');
+  if (openEl) openEl.textContent = String(open);
+  if (fixedEl) fixedEl.textContent = String(fixed);
+  if (allEl) allEl.textContent = String(all);
+
+  $$('#findingsStatusTabs .findings-status-tab').forEach((btn) => {
+    const active = btn.dataset.status === findingsStatusFilter;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+
+  const meta = $('#findingsPanelMeta');
+  if (meta) {
+    if (findingsStatusFilter === 'fixed') {
+      meta.textContent = 'Remediated findings — open the Fixed ↗ link to review the PR or commit';
+    } else if (findingsStatusFilter === 'all') {
+      meta.textContent = 'Open and fixed findings · ranked by severity';
+    } else {
+      meta.textContent = 'Open issues ready to remediate · Fixed moves to the Fixed tab';
+    }
+  }
+}
+
+function setFindingsStatusFilter(status) {
+  if (!['open', 'fixed', 'all'].includes(status)) return;
+  findingsStatusFilter = status;
+  filterFindings();
+}
+
 function filterFindings() {
   const q = ($('#findingsSearchInput')?.value ?? '').trim().toLowerCase();
   const source = allFindings ?? [];
   let filtered = source;
+
+  if (findingsStatusFilter === 'open') {
+    filtered = filtered.filter((f) => !f.fixed);
+  } else if (findingsStatusFilter === 'fixed') {
+    filtered = filtered.filter((f) => f.fixed);
+  }
 
   if (findingsSeverityFilter) {
     filtered = filtered.filter((f) => f.severity === findingsSeverityFilter);
@@ -2290,6 +2335,7 @@ function filterFindings() {
     );
   }
 
+  updateFindingsStatusTabs();
   renderFindingsTable(filtered);
 }
 
@@ -2561,6 +2607,11 @@ $('#issuesViewFeedBtn').addEventListener('click', async () => {
   }
 });
 $('#findingsSearchInput').addEventListener('input', () => filterFindings());
+
+$('#findingsStatusTabs')?.addEventListener('click', (e) => {
+  const tab = e.target.closest('.findings-status-tab');
+  if (tab?.dataset.status) setFindingsStatusFilter(tab.dataset.status);
+});
 
 $('#findingsSevFilters')?.addEventListener('click', (e) => {
   const chip = e.target.closest('.sev-filter-chip');

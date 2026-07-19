@@ -922,6 +922,49 @@ button.sev-badge.sev-filter-btn.active {
   align-items: center;
   gap: 6px;
 }
+.findings-status-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+}
+.findings-status-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.findings-status-tab:hover { color: var(--text-2); }
+.findings-status-tab.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.findings-status-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 1.4em;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text-3);
+}
+.findings-status-tab.active .findings-status-count {
+  background: var(--violet-dim);
+  color: var(--violet);
+}
 .sev-filter-chip {
   padding: 5px 10px;
   border-radius: 6px;

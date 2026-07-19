@@ -529,9 +529,14 @@
           <div class="panel-toolbar">
             <div>
               <h2>Findings</h2>
-              <span class="panel-meta">Ranked by severity · click a severity badge to filter · A-Fix to resolve</span>
+              <span class="panel-meta" id="findingsPanelMeta">Open issues ready to remediate · Fixed moves to the Fixed tab</span>
             </div>
             <div class="findings-toolbar-right">
+              <div class="findings-status-tabs" id="findingsStatusTabs" role="tablist" aria-label="Finding status">
+                <button type="button" class="findings-status-tab active" data-status="open" role="tab" aria-selected="true">Open <span id="findingsOpenCount" class="findings-status-count">0</span></button>
+                <button type="button" class="findings-status-tab" data-status="fixed" role="tab" aria-selected="false">Fixed <span id="findingsFixedCount" class="findings-status-count">0</span></button>
+                <button type="button" class="findings-status-tab" data-status="all" role="tab" aria-selected="false">All <span id="findingsAllCount" class="findings-status-count">0</span></button>
+              </div>
               <div class="findings-sev-filters" id="findingsSevFilters" aria-label="Filter by severity">
                 <button type="button" class="sev-filter-chip sev-critical" data-sev="critical">Critical</button>
                 <button type="button" class="sev-filter-chip sev-warning" data-sev="warning">High</button>
@@ -1315,7 +1320,7 @@
           <h4 id="autofixSuccessTitle">Fix applied</h4>
           <p id="autofixSuccessMsg" class="autofix-success-msg"></p>
           <a id="autofixSuccessLink" class="btn-outline btn-block hidden" href="#" target="_blank" rel="noopener">View on GitHub</a>
-          <p class="autofix-success-check">In Findings, this row now shows <strong>Fixed</strong>. Review the PR/commit before merging.</p>
+          <p class="autofix-success-check">This finding moves to <strong>Findings → Fixed</strong>. Review the PR/commit before merging.</p>
         </div>
         <div id="autofixReview" class="autofix-review">
           <div class="ai-warning-banner">
