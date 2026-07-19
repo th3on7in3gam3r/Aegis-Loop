@@ -33,7 +33,7 @@ export const config = {
             : 'anthropic',
     anthropicKey: process.env.ANTHROPIC_API_KEY || '',
     openaiKey: process.env.OPENAI_API_KEY || '',
-    anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
+    anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
     openaiModel: process.env.OPENAI_MODEL || 'gpt-4o',
   },
 } as const;

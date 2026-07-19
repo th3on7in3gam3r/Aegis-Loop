@@ -92,7 +92,7 @@ async function callAnthropic(system: string, user: string): Promise<string> {
     // Common case: invalid/unavailable model id surfaces as "model: …"
     if (/^model:/i.test(detail) || (res.status === 404 && /model/i.test(detail))) {
       throw new Error(
-        `AI model unavailable (${config.ai.anthropicModel}). Check ANTHROPIC_API_KEY billing/access and ANTHROPIC_MODEL on the server.`
+        `AI model unavailable (${config.ai.anthropicModel}). That model may be retired — set ANTHROPIC_MODEL=claude-sonnet-4-6 on the server (credits alone won’t help).`
       );
     }
     throw new Error(detail);
