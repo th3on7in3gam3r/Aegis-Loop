@@ -34,6 +34,9 @@ export const config = {
     anthropicKey: process.env.ANTHROPIC_API_KEY || '',
     openaiKey: process.env.OPENAI_API_KEY || '',
     anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
+    /** Used only when the primary model is unavailable/retired. */
+    anthropicModelFallback:
+      process.env.ANTHROPIC_MODEL_FALLBACK || 'claude-sonnet-4-5-20250929',
     openaiModel: process.env.OPENAI_MODEL || 'gpt-4o',
   },
 } as const;
