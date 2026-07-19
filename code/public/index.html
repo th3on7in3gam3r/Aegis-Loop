@@ -1310,28 +1310,38 @@
         </button>
       </div>
       <div class="side-panel-body">
-        <div class="ai-warning-banner">
-          <strong>Review before applying.</strong> AI and automated fixes can be wrong or incomplete. Always read the diff, test your code, and verify it meets your security standards before merging.
+        <div id="autofixSuccess" class="autofix-success hidden" role="status" aria-live="polite">
+          <div class="autofix-success-icon" aria-hidden="true">✓</div>
+          <h4 id="autofixSuccessTitle">Fix applied</h4>
+          <p id="autofixSuccessMsg" class="autofix-success-msg"></p>
+          <a id="autofixSuccessLink" class="btn-outline btn-block hidden" href="#" target="_blank" rel="noopener">View on GitHub</a>
+          <p class="autofix-success-check">In Findings, this row now shows <strong>Fixed</strong>. Review the PR/commit before merging.</p>
         </div>
-        <p id="panelDesc" class="panel-desc"></p>
-        <div class="panel-meta">
-          <span id="panelSeverity" class="sev-badge"></span>
-          <span id="panelLocation" class="panel-loc"></span>
-        </div>
-        <div class="diff">
-          <div><span class="diff-label">Before</span><pre id="panelBefore"></pre></div>
-          <div><span class="diff-label">After</span><pre id="panelAfter"></pre></div>
-        </div>
-        <div class="manual-fix-section">
-          <h4>Fix it yourself</h4>
-          <p class="manual-fix-hint">Copy this guidance into your editor or AI assistant:</p>
-          <textarea id="manualFixPrompt" class="manual-fix-prompt" readonly rows="6"></textarea>
-          <button type="button" class="btn-outline btn-block" id="copyManualPromptBtn">Copy prompt</button>
+        <div id="autofixReview" class="autofix-review">
+          <div class="ai-warning-banner">
+            <strong>Review before applying.</strong> AI and automated fixes can be wrong or incomplete. Always read the diff, test your code, and verify it meets your security standards before merging.
+          </div>
+          <p id="panelDesc" class="panel-desc"></p>
+          <div class="panel-meta">
+            <span id="panelSeverity" class="sev-badge"></span>
+            <span id="panelLocation" class="panel-loc"></span>
+          </div>
+          <div class="diff">
+            <div><span class="diff-label">Before</span><pre id="panelBefore"></pre></div>
+            <div><span class="diff-label">After</span><pre id="panelAfter"></pre></div>
+          </div>
+          <div class="manual-fix-section">
+            <h4>Fix it yourself</h4>
+            <p class="manual-fix-hint">Copy this guidance into your editor or AI assistant:</p>
+            <textarea id="manualFixPrompt" class="manual-fix-prompt" readonly rows="6"></textarea>
+            <button type="button" class="btn-outline btn-block" id="copyManualPromptBtn">Copy prompt</button>
+          </div>
         </div>
       </div>
       <div class="side-panel-footer">
         <p id="panelHint" class="autofix-hint"></p>
         <button type="button" class="btn-primary btn-block" id="applyFixBtn">Apply AutoFix</button>
+        <button type="button" class="btn-primary btn-block hidden" id="autofixDoneBtn">Done</button>
       </div>
     </aside>
   </div>

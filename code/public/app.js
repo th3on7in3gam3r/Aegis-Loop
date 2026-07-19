@@ -1892,7 +1892,9 @@ function renderFindingsTable(findings, opts = {}) {
 
     let statusCell;
     if (f.fixed) {
-      statusCell = `<span class="status-fixed">Fixed</span>`;
+      statusCell = f.prUrl
+        ? `<a class="status-fixed" href="${escapeHtml(f.prUrl)}" target="_blank" rel="noopener" title="Open fix on GitHub">Fixed ↗</a>`
+        : `<span class="status-fixed">Fixed</span>`;
     } else if (mod === 'code' && canShowCodeFix(f) && !canAutofix()) {
       statusCell = `<button type="button" class="status-todo upgrade-fix-btn" title="A-Fix requires Team plan">Upgrade</button>`;
     } else if (mod === 'code' && f.autofix) {
@@ -2076,7 +2078,46 @@ function closeAutofixPanel() {
   }, 300);
 }
 
+function setAutofixPanelMode(mode) {
+  const success = mode === 'success';
+  $('#autofixSuccess')?.classList.toggle('hidden', !success);
+  $('#autofixReview')?.classList.toggle('hidden', success);
+  $('#applyFixBtn')?.classList.toggle('hidden', success);
+  $('#autofixDoneBtn')?.classList.toggle('hidden', !success);
+  $('#panelHint')?.classList.toggle('hidden', success);
+}
+
+function showAutofixSuccess(result) {
+  const prUrl = result.prUrl || result.finding?.prUrl || '';
+  const title = prUrl.includes('/pull/') || prUrl.includes('/commit/')
+    ? 'Fix applied on GitHub'
+    : 'Finding marked fixed';
+  $('#autofixSuccessTitle').textContent = title;
+  $('#autofixSuccessMsg').textContent = result.message
+    || (prUrl
+      ? 'The patch was written. Open GitHub to review the diff before merging.'
+      : 'Marked fixed in Aegis Loop. Connect GitHub to push autofixes on real repos.');
+
+  const link = $('#autofixSuccessLink');
+  if (prUrl) {
+    link.href = prUrl;
+    link.classList.remove('hidden');
+    link.textContent = prUrl.includes('/pull/')
+      ? 'Open autofix PR'
+      : prUrl.includes('/commit/')
+        ? 'Open commit'
+        : 'View on GitHub';
+  } else {
+    link.classList.add('hidden');
+    link.removeAttribute('href');
+  }
+
+  setAutofixPanelMode('success');
+  $('#panelTitle').textContent = 'Applied';
+}
+
 function populateAutofixPanel(finding, autofix, aiGenerated) {
+  setAutofixPanelMode('review');
   panelAiGenerated = aiGenerated;
   const isBug = isBugFinding(finding);
   $('#panelTitle').textContent = finding.title;
@@ -2101,8 +2142,8 @@ function populateAutofixPanel(finding, autofix, aiGenerated) {
     currentScan?.repo ?? '—'
   );
   $('#panelHint').textContent = currentScan?.pullRequest
-    ? 'Apply pushes a commit to the PR branch.'
-    : 'Apply opens an autofix PR on GitHub (demo repos are marked fixed locally only).';
+    ? 'Apply pushes a commit to the PR branch. You’ll get a success screen with the commit link.'
+    : 'Apply opens an autofix PR on GitHub (demo repos are marked fixed locally only). You’ll see a confirmation here.';
 
   const canApply = Boolean(autofix?.patchedFile || finding.autofix?.patchedFile || llmAvailable);
   $('#applyFixBtn').classList.toggle('hidden', !canApply);
@@ -2133,15 +2174,15 @@ async function openAutofixPanel(findingId, scanId) {
   if (f.autofix) return;
 
   if (!llmAvailable) {
-    $('#panelAfter').textContent = finding.remediation?.steps?.length
-      ? finding.remediation.steps.map((step, i) => `${i + 1}. ${step}`).join('\n\n')
+    $('#panelAfter').textContent = f.remediation?.steps?.length
+      ? f.remediation.steps.map((step, i) => `${i + 1}. ${step}`).join('\n\n')
       : 'No automated patch — use the manual prompt below.';
     $('#applyFixBtn').classList.add('hidden');
     return;
   }
 
-  if (finding.remediation?.steps?.length && !finding.autofix) {
-    $('#panelAfter').textContent = `${finding.remediation.steps.map((step, i) => `${i + 1}. ${step}`).join('\n\n')}\n\n— Generating AI fix…`;
+  if (f.remediation?.steps?.length && !f.autofix) {
+    $('#panelAfter').textContent = `${f.remediation.steps.map((step, i) => `${i + 1}. ${step}`).join('\n\n')}\n\n— Generating AI fix…`;
   } else {
     $('#panelAfter').textContent = 'Generating AI fix…';
   }
@@ -2367,13 +2408,12 @@ async function applyAutofix() {
       `/api/scans/${currentScan.id}/findings/${activeFinding.id}/autofix`,
       { method: 'POST', body: JSON.stringify({ createPr: true }) }
     );
-    closeAutofixPanel();
-    renderScan(await api(`/api/scans/${currentScan.id}`));
-    toast(result.message);
-    if (result.prUrl && !currentScan?.pullRequest) window.open(result.prUrl, '_blank');
+    const updated = await api(`/api/scans/${currentScan.id}`);
+    renderScan(updated);
+    showAutofixSuccess(result);
+    toast(result.message || 'Fix applied');
   } catch (e) {
     toast(e.message);
-  } finally {
     btn.disabled = false;
     btn.textContent = 'Apply AutoFix';
   }
@@ -2496,6 +2536,7 @@ document.addEventListener('keydown', (e) => {
   closeTopModal();
 });
 $('#applyFixBtn').addEventListener('click', applyAutofix);
+$('#autofixDoneBtn')?.addEventListener('click', () => closeAutofixPanel());
 $('#bulkScanBtn').addEventListener('click', runBulkScan);
 $('#copyManualPromptBtn').addEventListener('click', () => {
   navigator.clipboard.writeText($('#manualFixPrompt').value).then(() => toast('Copied to clipboard')).catch(() => toast('Could not copy'));

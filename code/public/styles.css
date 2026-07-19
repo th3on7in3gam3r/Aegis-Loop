@@ -1230,6 +1230,29 @@ button.sev-badge.sev-filter-btn.active {
 }
 .modal-form { display: flex; flex-direction: column; }
 .autofix-hint { font-size: 12px; color: var(--text-3); line-height: 1.45; }
+.autofix-review { display: flex; flex-direction: column; gap: 16px; }
+.autofix-success {
+  display: flex; flex-direction: column; align-items: stretch; gap: 12px;
+  padding: 18px 16px; border-radius: var(--radius-sm);
+  background: var(--green-dim); border: 1px solid rgba(5,150,105,0.22);
+}
+.autofix-success.hidden { display: none; }
+.autofix-review.hidden { display: none; }
+.autofix-success-icon {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(5,150,105,0.18); color: var(--green);
+  font-size: 18px; font-weight: 700;
+}
+.autofix-success h4 {
+  margin: 0; font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.02em;
+}
+.autofix-success-msg { margin: 0; font-size: 13px; line-height: 1.55; color: var(--text-2); }
+.autofix-success-check { margin: 0; font-size: 12px; line-height: 1.5; color: var(--text-3); }
+a.status-fixed {
+  text-decoration: none; cursor: pointer;
+}
+a.status-fixed:hover { filter: brightness(0.95); }
 
 .scan-tabs {
   display: flex; gap: 4px; margin-bottom: 20px;
