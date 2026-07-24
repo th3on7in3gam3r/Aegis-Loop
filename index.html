@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="growth-stack-cadence-url" content="https://cadence.biblefunland.com/app">
+<meta name="growth-stack-signaldesk-url" content="https://signaldeskblog.com">
 <title>Aegis Loop — Find it. Fix it. Ship it.</title>
 <meta name="description" content="Aegis Loop scans GitHub repos and pull requests for secrets, injection flaws, and vulnerable dependencies — with cloud IaC, URL probes, and WAF rule export on Team.">
 <meta name="robots" content="index, follow">
@@ -785,9 +786,71 @@
   .partner-card-actions {
     display: flex; flex-direction: column; align-items: flex-start; gap: 10px; flex-shrink: 0;
   }
+  .partner-card-actions-row {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  }
   .partner-note { font-size: 12px; color: var(--text-muted); }
   .partner-inline-link { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
   .partner-inline-link:hover { color: var(--violet-bright); }
+
+  /* ── Growth stack ── */
+  .growth-stack-featured {
+    margin-bottom: 28px;
+  }
+  .growth-stack-featured .partner-card-actions-row .btn-ghost {
+    font-size: 13px;
+  }
+  .growth-stack-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .growth-stack-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.25s, transform 0.25s var(--ease-out), box-shadow 0.25s;
+  }
+  .growth-stack-card:hover {
+    border-color: rgba(14, 165, 233, 0.35);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px -18px rgba(15, 20, 40, 0.12);
+  }
+  .growth-stack-card-body {
+    padding: 22px 22px 12px;
+    flex: 1;
+  }
+  .growth-stack-card .partner-eyebrow {
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .growth-stack-card h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+    line-height: 1.25;
+  }
+  .growth-stack-card p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    max-width: none;
+  }
+  .growth-stack-card-actions {
+    padding: 0 22px 22px;
+  }
+  .growth-stack-card-actions .btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 13px;
+  }
 
   /* ── Motto ── */
   .motto {
@@ -1528,50 +1591,71 @@
     </div>
   </section>
 
-  <!-- CITEPILOT -->
-  <section class="partner-promo divider" id="citepilot">
-    <div class="container reveal">
-      <div class="partner-card">
-        <div class="partner-card-body">
-          <span class="partner-eyebrow">Sister product</span>
-          <h2>Ship secure code — get cited in AI answers</h2>
-          <p><strong>Aegis Loop</strong> finds and fixes vulnerabilities in your repos. <strong><a href="https://getcitepilot.com" class="partner-inline-link" target="_blank" rel="noopener">CitePilot</a></strong> tracks whether ChatGPT, Perplexity, and other AI engines cite your product on buyer prompts — with a free citation audit and weekly GEO action plans.</p>
-        </div>
-        <div class="partner-card-actions">
-          <a href="https://getcitepilot.com" class="btn btn-primary" target="_blank" rel="noopener">Try CitePilot free <span class="btn-arrow">→</span></a>
-          <span class="partner-note">Generative Engine Optimization · getcitepilot.com</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- GROWTH STACK -->
   <section class="partner-promo divider" id="growth-stack">
     <div class="container reveal">
       <div class="section-head" style="margin-bottom:2rem">
         <span class="section-label">Growth stack</span>
-        <h2 class="section-title">Secure, cite, create, publish</h2>
-        <p class="section-desc">Aegis is the dev-security layer. These sister products from <a href="https://www.biblefunlandstudios.com/" target="_blank" rel="noopener" class="partner-inline-link">Bible Funland Studios</a> cover marketing war room, AI citations, and social autopilot.</p>
+        <h2 class="section-title">Secure the code. Grow the brand.</h2>
+        <p class="section-desc">Aegis is the dev-security layer. Sister products from <a href="https://www.biblefunlandstudios.com/" target="_blank" rel="noopener" class="partner-inline-link">Bible Funland Studios</a> cover citations, campaigns, social, and the GEO newsroom — secure → cite → create → publish.</p>
       </div>
-      <div class="pricing-grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
-        <div class="partner-card" style="margin:0">
+
+      <div class="growth-stack-featured">
+        <div class="partner-card">
           <div class="partner-card-body">
-            <span class="partner-eyebrow">Sister product</span>
-            <h2 style="font-size:1.35rem">Kerygma Social</h2>
-            <p>Drop your URL — get a month of social posts to approve and publish on autopilot.</p>
+            <span class="partner-eyebrow">Featured · SignalDesk Blog</span>
+            <h2>Citation studio for AI search</h2>
+            <p>Write citation-ready posts with SEO and GEO fields built in — then publish so ChatGPT, Perplexity, and AI Overviews have something to quote. The shared editorial desk for Cadence and CitePilot.</p>
           </div>
           <div class="partner-card-actions">
-            <a href="https://kerygmasocial.com" class="btn btn-ghost" target="_blank" rel="noopener">kerygmasocial.com <span class="btn-arrow">→</span></a>
+            <div class="partner-card-actions-row">
+              <a href="https://signaldeskblog.com/?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=signaldesk-featured" class="btn btn-primary" target="_blank" rel="noopener" id="signaldesk-stack-link">Browse SignalDesk Blog <span class="btn-arrow">→</span></a>
+              <a href="https://signaldeskblog.com/?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=signaldesk-write" class="btn btn-ghost" target="_blank" rel="noopener">Start writing free</a>
+            </div>
+            <span class="partner-note">GEO newsroom · signaldeskblog.com</span>
           </div>
         </div>
-        <div class="partner-card" style="margin:0">
-          <div class="partner-card-body">
+      </div>
+
+      <div class="growth-stack-grid">
+        <div class="growth-stack-card">
+          <div class="growth-stack-card-body">
             <span class="partner-eyebrow">Sister product</span>
-            <h2 style="font-size:1.35rem">Cadence</h2>
+            <h3>Cadence</h3>
             <p>Marketing war room — brand audits, SEO agent, campaigns, and content workspace.</p>
           </div>
-          <div class="partner-card-actions">
-            <a href="https://cadence.biblefunland.com/app" class="btn btn-ghost" target="_blank" rel="noopener" id="cadence-stack-link">cadence.biblefunland.com <span class="btn-arrow">→</span></a>
+          <div class="growth-stack-card-actions">
+            <a href="https://cadence.biblefunland.com/app?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=cadence" class="btn btn-ghost" target="_blank" rel="noopener" id="cadence-stack-link">Open Cadence <span class="btn-arrow">→</span></a>
+          </div>
+        </div>
+        <div class="growth-stack-card">
+          <div class="growth-stack-card-body">
+            <span class="partner-eyebrow">Sister product</span>
+            <h3>CitePilot</h3>
+            <p>Track whether ChatGPT, Perplexity, and AI engines cite your product on buyer prompts.</p>
+          </div>
+          <div class="growth-stack-card-actions">
+            <a href="https://getcitepilot.com/?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=citepilot" class="btn btn-ghost" target="_blank" rel="noopener">Try CitePilot free <span class="btn-arrow">→</span></a>
+          </div>
+        </div>
+        <div class="growth-stack-card">
+          <div class="growth-stack-card-body">
+            <span class="partner-eyebrow">Sister product</span>
+            <h3>Kerygma Social</h3>
+            <p>Drop your URL — get a month of social posts to approve and publish on autopilot.</p>
+          </div>
+          <div class="growth-stack-card-actions">
+            <a href="https://kerygmasocial.com/?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=kerygma" class="btn btn-ghost" target="_blank" rel="noopener">Open Kerygma <span class="btn-arrow">→</span></a>
+          </div>
+        </div>
+        <div class="growth-stack-card">
+          <div class="growth-stack-card-body">
+            <span class="partner-eyebrow">Sister product</span>
+            <h3>SignalDesk Blog</h3>
+            <p>Citation-ready GEO dispatches — the publish surface Cadence and CitePilot write into.</p>
+          </div>
+          <div class="growth-stack-card-actions">
+            <a href="https://signaldeskblog.com/?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=signaldesk-card" class="btn btn-ghost js-signaldesk-link" target="_blank" rel="noopener" data-utm-content="signaldesk-card">Browse SignalDesk Blog <span class="btn-arrow">→</span></a>
           </div>
         </div>
       </div>
@@ -1699,11 +1783,17 @@
           <p>What we scan for, GitHub setup, LLM autofix, and how Aegis Loop compares to traditional SAST.</p>
           <span class="resource-card-link">Read FAQ →</span>
         </a>
-        <a href="https://getcitepilot.com" class="resource-card" target="_blank" rel="noopener">
+        <a href="https://getcitepilot.com/?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=citepilot-resources" class="resource-card" target="_blank" rel="noopener">
           <span class="resource-card-label">Sister product</span>
           <h3>CitePilot — AI citation tracking</h3>
           <p>Monitor money prompts across ChatGPT, Perplexity, and Google AI. Free citation audit — complements shipping secure software with being found in AI answers.</p>
           <span class="resource-card-link">Visit getcitepilot.com →</span>
+        </a>
+        <a href="https://signaldeskblog.com/?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=signaldesk-resources" class="resource-card js-signaldesk-link" target="_blank" rel="noopener" data-utm-content="signaldesk-resources">
+          <span class="resource-card-label">Growth stack</span>
+          <h3>SignalDesk Blog — GEO newsroom</h3>
+          <p>Citation-ready posts with SEO and GEO fields — publish so ChatGPT, Perplexity, and AI Overviews have something to quote.</p>
+          <span class="resource-card-link">Visit signaldeskblog.com →</span>
         </a>
         <a href="/llms.txt" class="resource-card">
           <span class="resource-card-label">Reference</span>
@@ -1872,9 +1962,10 @@
         <ul>
           <li><a href="#about">About</a></li>
           <li><a href="#contact">Contact</a></li>
-          <li><a href="https://getcitepilot.com" target="_blank" rel="noopener">CitePilot (GEO)</a></li>
-          <li><a href="https://kerygmasocial.com" target="_blank" rel="noopener">Kerygma Social</a></li>
-          <li><a href="https://cadence.biblefunland.com/app" target="_blank" rel="noopener" class="js-cadence-link">Cadence</a></li>
+          <li><a href="https://getcitepilot.com/?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=citepilot-footer" target="_blank" rel="noopener">CitePilot (GEO)</a></li>
+          <li><a href="https://signaldeskblog.com/?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=signaldesk-footer" class="js-signaldesk-link" target="_blank" rel="noopener" data-utm-content="signaldesk-footer">SignalDesk Blog</a></li>
+          <li><a href="https://kerygmasocial.com/?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=kerygma-footer" target="_blank" rel="noopener">Kerygma Social</a></li>
+          <li><a href="https://cadence.biblefunland.com/app?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=cadence-footer" target="_blank" rel="noopener" class="js-cadence-link">Cadence</a></li>
           <li><a href="https://www.biblefunlandstudios.com/" target="_blank" rel="noopener">Bible Funland Studios</a></li>
           <li><a href="mailto:hello@aegisloop.dev" class="js-contact-email">hello@aegisloop.dev</a></li>
           <li><a href="mailto:sales@aegisloop.dev" class="js-contact-email">sales@aegisloop.dev</a></li>
@@ -1894,9 +1985,10 @@
           <li><a href="/login">Dashboard</a></li>
           <li><a href="https://github.com/th3on7in3gam3r/Aegis-Loop#readme" target="_blank" rel="noopener">GitHub</a></li>
           <li><a href="/llms.txt">llms.txt</a></li>
-          <li><a href="https://getcitepilot.com" target="_blank" rel="noopener">CitePilot</a></li>
-          <li><a href="https://kerygmasocial.com" target="_blank" rel="noopener">Kerygma Social</a></li>
-          <li><a href="https://cadence.biblefunland.com/app" target="_blank" rel="noopener" class="js-cadence-link">Cadence</a></li>
+          <li><a href="https://getcitepilot.com/?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=citepilot-dev" target="_blank" rel="noopener">CitePilot</a></li>
+          <li><a href="https://signaldeskblog.com/?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=signaldesk-dev" class="js-signaldesk-link" target="_blank" rel="noopener" data-utm-content="signaldesk-dev">SignalDesk Blog</a></li>
+          <li><a href="https://kerygmasocial.com/?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=kerygma-dev" target="_blank" rel="noopener">Kerygma Social</a></li>
+          <li><a href="https://cadence.biblefunland.com/app?utm_source=aegis&amp;utm_campaign=growth-stack&amp;utm_medium=referral&amp;utm_content=cadence-dev" target="_blank" rel="noopener" class="js-cadence-link">Cadence</a></li>
           <li><a href="#resources">Resources</a></li>
         </ul>
       </div>
@@ -2069,12 +2161,39 @@
     .catch(() => {});
 
   (function () {
-    var meta = document.querySelector('meta[name="growth-stack-cadence-url"]');
-    var cadenceUrl = meta && meta.getAttribute('content');
-    if (!cadenceUrl) return;
-    document.querySelectorAll('.js-cadence-link, #cadence-stack-link').forEach(function (el) {
-      el.href = cadenceUrl;
-    });
+    function withGrowthUtm(base, content) {
+      try {
+        var u = new URL(base, window.location.origin);
+        if (!u.searchParams.has('utm_source')) {
+          u.searchParams.set('utm_source', 'aegis');
+          u.searchParams.set('utm_campaign', 'growth-stack');
+          u.searchParams.set('utm_medium', 'referral');
+          u.searchParams.set('utm_content', content);
+        }
+        return u.toString();
+      } catch (e) {
+        return base;
+      }
+    }
+
+    var cadenceMeta = document.querySelector('meta[name="growth-stack-cadence-url"]');
+    var cadenceUrl = cadenceMeta && cadenceMeta.getAttribute('content');
+    if (cadenceUrl) {
+      document.querySelectorAll('.js-cadence-link, #cadence-stack-link').forEach(function (el) {
+        var content = el.id === 'cadence-stack-link' ? 'cadence' : 'cadence-footer';
+        el.href = withGrowthUtm(cadenceUrl, content);
+      });
+    }
+
+    var signaldeskMeta = document.querySelector('meta[name="growth-stack-signaldesk-url"]');
+    var signaldeskUrl = signaldeskMeta && signaldeskMeta.getAttribute('content');
+    if (signaldeskUrl) {
+      document.querySelectorAll('.js-signaldesk-link, #signaldesk-stack-link').forEach(function (el) {
+        var content = el.getAttribute('data-utm-content')
+          || (el.id === 'signaldesk-stack-link' ? 'signaldesk-featured' : 'signaldesk');
+        el.href = withGrowthUtm(signaldeskUrl, content);
+      });
+    }
   })();
 </script>
 </body>
