@@ -20,6 +20,33 @@
       }
     })();
   </script>
+  <script defer src="https://pulse-5o1m.onrender.com/pulse.js" data-site="site_mt9qbw80" data-host="https://pulse-5o1m.onrender.com"></script>
+  <script>
+    /* SPA client-side route changes → Pulse pageview (initial load is handled by pulse.js) */
+    (function () {
+      var last = location.href;
+      function trackPageview() {
+        if (location.href === last) return;
+        last = location.href;
+        if (window.Pulse && typeof window.Pulse.track === 'function') {
+          window.Pulse.track('pageview');
+        }
+      }
+      var push = history.pushState.bind(history);
+      var replace = history.replaceState.bind(history);
+      history.pushState = function () {
+        var ret = push.apply(null, arguments);
+        trackPageview();
+        return ret;
+      };
+      history.replaceState = function () {
+        var ret = replace.apply(null, arguments);
+        trackPageview();
+        return ret;
+      };
+      window.addEventListener('popstate', trackPageview);
+    })();
+  </script>
 </head>
 <body>
   <div class="shell">

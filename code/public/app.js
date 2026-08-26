@@ -2817,6 +2817,9 @@ loadAuth().then(async () => {
   }
   if (params.get('billing') === 'success') {
     history.replaceState(null, '', '/app/');
+    if (window.Pulse && typeof window.Pulse.track === 'function') {
+      window.Pulse.track('checkout_completed');
+    }
     try {
       await api('/api/billing/sync', { method: 'POST' });
       toast('Team plan active — A-Fix and all modules unlocked');
