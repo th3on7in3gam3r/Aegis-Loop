@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { ForgejoProvider, statusFor, type FetchLike } from './forgejo.js';
+import { ForgejoProvider, statusFor, validateForgejoUrl, type FetchLike } from './forgejo.js';
 import { BOT_COMMENT_MARKER } from '../github/pr.js';
 import { handleForgejoWebhook, runPrScan } from '../github/webhooks.js';
 import { ScanJobQueue, type QueueStorage, type ScanJob } from '../jobs/queue.js';
@@ -219,5 +219,24 @@ describe('runPrScan with a failing checkout', () => {
       /clone failed/
     );
     assert.equal(calls.some((c) => c.path.includes('/statuses/') || c.method === 'POST'), false);
+  });
+});
+
+describe('validateForgejoUrl', () => {
+  it('accepts an https origin and localhost over http', () => {
+    assert.equal(validateForgejoUrl('https://git.example.com'), 'https://git.example.com');
+    assert.equal(validateForgejoUrl('http://127.0.0.1:3300'), 'http://127.0.0.1:3300');
+  });
+
+  it('rejects plain http, embedded credentials and paths', () => {
+    assert.throws(() => validateForgejoUrl('http://git.example.com'), /https/);
+    assert.throws(() => validateForgejoUrl('https://user:pw@git.example.com'), /credentials/);
+    assert.throws(() => validateForgejoUrl('https://git.example.com/evil?x=1'), /origin/);
+    assert.throws(() => validateForgejoUrl('not a url'), /valid URL/);
+  });
+
+  it('disables the provider instead of throwing on a bad URL', () => {
+    const p = new ForgejoProvider({ baseUrl: 'http://evil.example.com', token: 't', webhookSecret: 's' });
+    assert.equal(p.configured, false);
   });
 });

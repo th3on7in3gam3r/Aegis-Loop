@@ -66,6 +66,29 @@ export interface ForgejoOptions {
 
 const login = (u?: ForgejoUser) => u?.login ?? u?.username ?? '';
 
+/**
+ * The token is sent to FORGEJO_URL, so only accept a plain HTTPS origin
+ * (no credentials, path, query or fragment). Plain HTTP is allowed only for
+ * localhost, for local testing. Returns the normalised origin.
+ */
+export function validateForgejoUrl(raw: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error(`FORGEJO_URL is not a valid URL: ${raw}`);
+  }
+  const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && local)) {
+    throw new Error('FORGEJO_URL must use https:// (http is only allowed for localhost)');
+  }
+  if (url.username || url.password) throw new Error('FORGEJO_URL must not contain credentials');
+  if ((url.pathname !== '/' && url.pathname !== '') || url.search || url.hash) {
+    throw new Error('FORGEJO_URL must be just the server origin, e.g. https://git.example.com');
+  }
+  return url.origin;
+}
+
 export class ForgejoProvider implements GitProvider {
   readonly id = 'forgejo' as const;
   private readonly baseUrl: string;
@@ -75,7 +98,17 @@ export class ForgejoProvider implements GitProvider {
   private identity: Promise<string | null> | null = null;
 
   constructor(opts: ForgejoOptions = {}) {
-    this.baseUrl = (opts.baseUrl ?? config.forgejo.url).replace(/\/+$/, '');
+    const raw = (opts.baseUrl ?? config.forgejo.url).replace(/\/+$/, '');
+    let baseUrl = '';
+    if (raw) {
+      try {
+        baseUrl = validateForgejoUrl(raw);
+      } catch (err) {
+        // Disable Forgejo rather than crash the whole server on a bad setting.
+        console.error(`[forgejo] disabled: ${err instanceof Error ? err.message : err}`);
+      }
+    }
+    this.baseUrl = baseUrl;
     this.token = opts.token ?? config.forgejo.token;
     this.webhookSecret = opts.webhookSecret ?? config.forgejo.webhookSecret;
     this.fetchImpl = opts.fetch ?? ((url, init) => fetch(url, init));
