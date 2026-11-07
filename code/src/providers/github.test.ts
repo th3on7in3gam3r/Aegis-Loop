@@ -72,3 +72,16 @@ describe('redactGitError', () => {
     assert.match(out, /https:\/\/\*\*\*@github\.com/);
   });
 });
+
+describe('findOwnBotComment', () => {
+  it('only matches marked comments written by our own account', async () => {
+    const { findOwnBotComment, BOT_COMMENT_MARKER } = await import('../github/pr.js');
+    const comments = [
+      { id: 1, body: `${BOT_COMMENT_MARKER} spoofed`, user: { login: 'attacker', type: 'User' } },
+      { id: 2, body: 'unrelated', user: { login: 'aegis-bot', type: 'User' } },
+      { id: 3, body: `${BOT_COMMENT_MARKER}\nreal`, user: { login: 'aegis-bot', type: 'User' } },
+    ];
+    assert.equal(findOwnBotComment(comments, 'aegis-bot')?.id, 3);
+    assert.equal(findOwnBotComment(comments.slice(0, 2), 'aegis-bot'), undefined);
+  });
+});

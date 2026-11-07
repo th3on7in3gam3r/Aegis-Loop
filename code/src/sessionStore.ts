@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from './config.js';
 import { dbConfigured, loadBlob, saveBlob } from './db.js';
+import { decryptSecret, encryptSecret } from './secrets.js';
 import type { GitHubSession } from './types.js';
 
 /**
@@ -22,14 +23,19 @@ const sessions = new Map<string, StoredSession>();
 
 const BLOB_NAME = 'sessions';
 
+/** Tokens are encrypted at rest; only the in-memory copy is plaintext. */
+function serialize(): StoredSession[] {
+  return [...sessions.values()].map((s) => ({ ...s, token: encryptSecret(s.token) }));
+}
+
 function persist(): void {
   if (dbConfigured()) {
-    saveBlob(BLOB_NAME, [...sessions.values()]);
+    saveBlob(BLOB_NAME, serialize());
     return;
   }
   try {
     mkdirSync(config.dataDir, { recursive: true });
-    writeFileSync(STORE_FILE, JSON.stringify([...sessions.values()]));
+    writeFileSync(STORE_FILE, JSON.stringify(serialize()));
   } catch {
     /* disk issue — sessions stay in-memory until next successful write */
   }
@@ -48,9 +54,18 @@ export async function loadSessionStore(): Promise<void> {
   }
   if (!data) return;
   const now = Date.now();
+  let legacyPlaintext = false;
   for (const s of data) {
-    if (s.expiresAt > now) sessions.set(s.id, s);
+    if (s.expiresAt <= now) continue;
+    try {
+      if (!s.token.startsWith('enc:')) legacyPlaintext = true;
+      sessions.set(s.id, { ...s, token: decryptSecret(s.token) });
+    } catch {
+      /* encrypted with a different key — drop it; the user just logs in again */
+    }
   }
+  // Re-save so any legacy plaintext tokens are encrypted right away.
+  if (legacyPlaintext) persist();
 }
 
 function pruneExpired(): void {

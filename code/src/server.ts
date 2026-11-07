@@ -46,7 +46,7 @@ import {
   setSessionCookie,
 } from './session.js';
 import { loadSessionStore } from './sessionStore.js';
-import { dbConfigured } from './db.js';
+import { dbConfigured, persistenceHealth } from './db.js';
 import { requireAuth, resolveAuth } from './billing/auth.js';
 import { assertAutofixAccess, assertModuleAccess, canScanRepo, planSummary } from './billing/limits.js';
 import { getAccountForUser, syncOwnerPlan } from './billing/owners.js';
@@ -343,8 +343,15 @@ function resolveGithubToken(
 
 // ── Health ──
 
-app.get('/api/health', async () => ({
-  ok: true,
+app.get('/api/health', async (_req, reply) => {
+  const persistence = persistenceHealth();
+  if (!persistence.ok) reply.status(503);
+  return healthBody(persistence);
+});
+
+const healthBody = (persistence: ReturnType<typeof persistenceHealth>) => ({
+  ok: persistence.ok,
+  persistence: { ok: persistence.ok, failingStores: Object.keys(persistence.failing) },
   appUrl: config.appUrl,
   production: !/localhost|127\.0\.0\.1/i.test(config.appUrl),
   contactEmail: config.contactEmail,
@@ -376,7 +383,7 @@ app.get('/api/health', async () => ({
   },
   storage: dbConfigured() ? 'postgres' : 'file',
   email: { configured: isEmailConfigured() },
-}));
+});
 
 app.post('/api/contact', async (req, reply) => {
   if (!contactRateOk(req.ip || 'unknown')) return rateLimited(reply);
@@ -1170,6 +1177,10 @@ const DEV_SESSION_SECRET = 'aegis-loop-dev-secret-change-in-prod';
 const isLocalApp = /localhost|127\.0\.0\.1/i.test(config.appUrl);
 if (!isLocalApp && (!process.env.SESSION_SECRET || config.sessionSecret === DEV_SESSION_SECRET)) {
   throw new Error('SESSION_SECRET must be set to a strong random value in production');
+}
+if (!isLocalApp && config.sessionSecret.length < 32) {
+  // Warn rather than refuse, so an existing short secret can't take the site down.
+  console.warn('[security] SESSION_SECRET is shorter than 32 characters — rotate it to a longer random value.');
 }
 
 await app.listen({ port: config.port, host: '0.0.0.0' });

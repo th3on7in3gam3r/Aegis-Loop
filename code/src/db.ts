@@ -61,6 +61,12 @@ export async function loadBlob<T>(name: string): Promise<T | null> {
 // One in-flight write per store; if more writes arrive meanwhile, coalesce
 // them into a single trailing write with the latest payload.
 const writing = new Map<string, { pending: unknown | undefined }>();
+const failures = new Map<string, { at: string; error: string }>();
+
+/** Stores whose most recent write failed (cleared on the next success). */
+export function persistenceHealth(): { ok: boolean; failing: Record<string, { at: string; error: string }> } {
+  return { ok: failures.size === 0, failing: Object.fromEntries(failures) };
+}
 
 export function saveBlob(name: string, data: unknown): void {
   const state = writing.get(name);
@@ -80,7 +86,12 @@ async function flush(name: string, data: unknown): Promise<void> {
        ON CONFLICT (name) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
       [name, JSON.stringify(data)]
     );
+    failures.delete(name);
   } catch (err) {
+    failures.set(name, {
+      at: new Date().toISOString(),
+      error: err instanceof Error ? err.message : String(err),
+    });
     console.error(`[db] failed to persist store "${name}":`, err instanceof Error ? err.message : err);
   } finally {
     const state = writing.get(name);

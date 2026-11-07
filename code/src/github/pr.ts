@@ -85,6 +85,43 @@ export async function postPrComment(
   return data.html_url;
 }
 
+/** Hidden marker on every Aegis comment; the visible title is the legacy fallback. */
+export const BOT_COMMENT_MARKER = '<!-- aegis-loop:code-scan -->';
+const LEGACY_MARKER = 'Aegis Loop / code — security scan';
+
+const tokenIdentity = new Map<string, Promise<string | null>>();
+
+/** Login the token acts as (null for GitHub App installation tokens). */
+function identityFor(token: string): Promise<string | null> {
+  let cached = tokenIdentity.get(token);
+  if (!cached) {
+    cached = createOctokit(token)
+      .users.getAuthenticated()
+      .then(({ data }) => data.login)
+      .catch(() => null);
+    tokenIdentity.set(token, cached);
+  }
+  return cached;
+}
+
+type IssueComment = { id: number; body?: string | null; user?: { login?: string; type?: string } | null };
+
+/**
+ * Only a comment carrying our marker AND written by our own account counts —
+ * so anyone pasting the marker into a comment can't get it overwritten.
+ */
+export function findOwnBotComment(
+  comments: IssueComment[],
+  ownLogin: string | null
+): IssueComment | undefined {
+  return comments.find((c) => {
+    const body = c.body ?? '';
+    if (!body.includes(BOT_COMMENT_MARKER) && !body.includes(LEGACY_MARKER)) return false;
+    if (ownLogin) return c.user?.login === ownLogin;
+    return c.user?.type === 'Bot';
+  });
+}
+
 export async function updateExistingBotComment(
   token: string,
   owner: string,
@@ -93,27 +130,25 @@ export async function updateExistingBotComment(
   body: string
 ): Promise<string> {
   const octokit = createOctokit(token);
-  const marker = 'Aegis Loop / code — security scan';
+  const markedBody = body.includes(BOT_COMMENT_MARKER) ? body : `${BOT_COMMENT_MARKER}\n${body}`;
 
-  const { data: comments } = await octokit.issues.listComments({
-    owner,
-    repo,
-    issue_number: pullNumber,
-    per_page: 100,
-  });
+  const [ownLogin, { data: comments }] = await Promise.all([
+    identityFor(token),
+    octokit.issues.listComments({ owner, repo, issue_number: pullNumber, per_page: 100 }),
+  ]);
 
-  const existing = comments.find((c) => c.body?.includes(marker));
+  const existing = findOwnBotComment(comments, ownLogin);
   if (existing) {
     const { data } = await octokit.issues.updateComment({
       owner,
       repo,
       comment_id: existing.id,
-      body,
+      body: markedBody,
     });
     return data.html_url;
   }
 
-  return postPrComment(token, owner, repo, pullNumber, body);
+  return postPrComment(token, owner, repo, pullNumber, markedBody);
 }
 
 export async function setCommitStatus(
