@@ -25,7 +25,7 @@ import {
   pushAutofixToBranch,
   updateExistingBotComment,
 } from './github/pr.js';
-import { handleGitHubWebhook, runScanJob, scanJobs } from './github/webhooks.js';
+import { handleForgejoWebhook, handleGitHubWebhook, runScanJob, scanJobs } from './github/webhooks.js';
 import { scanDirectory } from './scanner/index.js';
 import { scanCloudDirectory } from './modules/cloud/scanner.js';
 import { scanAttackTarget, scanAttackTargets } from './modules/attack/scanner.js';
@@ -313,6 +313,7 @@ app.addHook('preParsing', async (request, _reply, payload) => {
   const path = request.url.split('?')[0];
   if (
     !path.startsWith('/api/webhooks/github') &&
+    !path.startsWith('/api/webhooks/forgejo') &&
     !path.startsWith('/api/billing/webhook') &&
     !path.startsWith('/api/partner/studio-billing')
   )
@@ -368,6 +369,9 @@ const healthBody = (persistence: ReturnType<typeof persistenceHealth>) => ({
     oauth: oauthConfigured(),
     webhook: Boolean(config.github.webhookSecret),
     serverToken: Boolean(config.github.token),
+  },
+  forgejo: {
+    configured: Boolean(config.forgejo.url && config.forgejo.token && config.forgejo.webhookSecret),
   },
   ai: {
     configured: llmConfigured(),
@@ -1153,6 +1157,17 @@ app.post('/api/protect/demo', async (req, reply) => {
 
 // ── Webhooks ──
 
+/**
+ * Bad requests (signature, headers) get 4xx; anything else — e.g. the job
+ * couldn't be saved — gets 503 so the provider knows to redeliver.
+ */
+function webhookError(reply: import('fastify').FastifyReply, err: unknown) {
+  const message = err instanceof Error ? err.message : 'Webhook error';
+  if (/signature|headers/i.test(message)) return reply.status(401).send({ error: message });
+  console.error('[webhook] failed:', message);
+  return reply.status(503).send({ error: 'Could not queue scan — please redeliver' });
+}
+
 app.post('/api/webhooks/github', async (req, reply) => {
   const rawBody = (req as { rawBody?: string }).rawBody ?? JSON.stringify(req.body);
 
@@ -1161,8 +1176,17 @@ app.post('/api/webhooks/github', async (req, reply) => {
     const result = await handleGitHubWebhook(rawBody, req.headers);
     return reply.status(result.queued ? 202 : 200).send(result);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Webhook error';
-    return reply.status(400).send({ error: message });
+    return webhookError(reply, err);
+  }
+});
+
+app.post('/api/webhooks/forgejo', async (req, reply) => {
+  const rawBody = (req as { rawBody?: string }).rawBody ?? JSON.stringify(req.body);
+  try {
+    const result = await handleForgejoWebhook(rawBody, req.headers);
+    return reply.status(result.queued ? 202 : 200).send(result);
+  } catch (err) {
+    return webhookError(reply, err);
   }
 });
 

@@ -22,6 +22,12 @@ export const config = {
     webhookSecret: process.env.GITHUB_WEBHOOK_SECRET || '',
     token: process.env.GITHUB_TOKEN || '',
   },
+  /** Forge ONE / self-hosted Forgejo (or Gitea) instance. */
+  forgejo: {
+    url: (process.env.FORGEJO_URL || '').replace(/\/+$/, ''),
+    token: process.env.FORGEJO_TOKEN || '',
+    webhookSecret: process.env.FORGEJO_WEBHOOK_SECRET || '',
+  },
   ai: {
     provider:
       process.env.LLM_PROVIDER === 'openai'
