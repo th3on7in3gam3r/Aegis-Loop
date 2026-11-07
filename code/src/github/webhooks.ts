@@ -77,7 +77,7 @@ export async function handleGitHubWebhook(
     return { handled: false, message: 'GITHUB_TOKEN required for webhook scans' };
   }
 
-  const { job, duplicate } = scanJobs.enqueue(event);
+  const { job, duplicate } = await scanJobs.enqueue(event);
   return {
     handled: true,
     queued: !duplicate,

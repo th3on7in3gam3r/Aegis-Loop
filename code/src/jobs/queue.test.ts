@@ -1,16 +1,26 @@
-import { describe, it } from 'node:test';
+import { after, describe, it } from 'node:test';
+import { newDb } from 'pg-mem';
+import { __setPoolForTests } from '../db.js';
 import assert from 'node:assert/strict';
-import { ScanJobQueue, type QueueStorage, type ScanJob } from './queue.js';
+import { postgresStorage, ScanJobQueue, type QueueStorage, type ScanJob } from './queue.js';
 import type { PullRequestEvent } from '../providers/types.js';
 
-function memoryStorage(initial: ScanJob[] = []): QueueStorage & { saved: ScanJob[] } {
+function memoryStorage(initial: ScanJob[] = []): QueueStorage & { saved: ScanJob[]; failNext: boolean } {
   const store = {
     saved: initial,
+    failNext: false,
     async load() {
       return structuredClone(store.saved);
     },
-    save(jobs: ScanJob[]) {
-      store.saved = structuredClone(jobs);
+    async upsert(job: ScanJob) {
+      if (store.failNext) {
+        store.failNext = false;
+        throw new Error('db down');
+      }
+      store.saved = [...store.saved.filter((j) => j.id !== job.id), structuredClone(job)];
+    },
+    async remove(ids: string[]) {
+      store.saved = store.saved.filter((j) => !ids.includes(j.id));
     },
   };
   return store;
@@ -35,11 +45,11 @@ function clock(start = Date.parse('2026-11-07T12:00:00Z')) {
 }
 
 describe('ScanJobQueue', () => {
-  it('collapses a redelivered webhook onto the existing job', () => {
+  it('collapses a redelivered webhook onto the existing job', async () => {
     const q = new ScanJobQueue({ storage: memoryStorage() });
-    const first = q.enqueue(event());
-    const again = q.enqueue(event());
-    const otherDelivery = q.enqueue(event({ deliveryId: 'delivery-2' }));
+    const first = await q.enqueue(event());
+    const again = await q.enqueue(event());
+    const otherDelivery = await q.enqueue(event({ deliveryId: 'delivery-2' }));
 
     assert.equal(first.duplicate, false);
     assert.equal(again.duplicate, true);
@@ -49,10 +59,10 @@ describe('ScanJobQueue', () => {
     assert.equal(q.list().length, 1);
   });
 
-  it('queues a new job for a new commit on the same PR', () => {
+  it('queues a new job for a new commit on the same PR', async () => {
     const q = new ScanJobQueue({ storage: memoryStorage() });
-    q.enqueue(event());
-    const next = q.enqueue(event({ deliveryId: 'd2', headSha: 'b'.repeat(40) }));
+    await q.enqueue(event());
+    const next = await q.enqueue(event({ deliveryId: 'd2', headSha: 'b'.repeat(40) }));
     assert.equal(next.duplicate, false);
     assert.equal(q.list().length, 2);
   });
@@ -60,7 +70,7 @@ describe('ScanJobQueue', () => {
   it('runs a job once and records the scan id', async () => {
     const q = new ScanJobQueue({ storage: memoryStorage() });
     let calls = 0;
-    const { job } = q.enqueue(event());
+    const { job } = await q.enqueue(event());
     q.start(async () => {
       calls += 1;
       return { scanId: 'scan-1' };
@@ -80,7 +90,7 @@ describe('ScanJobQueue', () => {
   it('retries with backoff, then fails permanently', async () => {
     const c = clock();
     const q = new ScanJobQueue({ storage: memoryStorage(), maxAttempts: 2, retryBaseMs: 1000, now: c.now });
-    const { job } = q.enqueue(event());
+    const { job } = await q.enqueue(event());
     q.start(async () => {
       throw new Error('boom');
     });
@@ -98,20 +108,20 @@ describe('ScanJobQueue', () => {
 
   it('allows re-enqueueing a commit whose job failed', async () => {
     const q = new ScanJobQueue({ storage: memoryStorage(), maxAttempts: 1 });
-    q.enqueue(event());
+    await q.enqueue(event());
     q.start(async () => {
       throw new Error('boom');
     });
     q.stop();
     await q.drain();
-    const retry = q.enqueue(event({ deliveryId: 'manual-retry' }));
+    const retry = await q.enqueue(event({ deliveryId: 'manual-retry' }));
     assert.equal(retry.duplicate, false);
   });
 
   it('persists jobs and requeues ones interrupted mid-run', async () => {
     const storage = memoryStorage();
     const q1 = new ScanJobQueue({ storage });
-    const { job } = q1.enqueue(event());
+    const { job } = await q1.enqueue(event());
     storage.saved = storage.saved.map((j) => ({ ...j, status: 'running' as const }));
 
     const q2 = new ScanJobQueue({ storage });
@@ -124,5 +134,42 @@ describe('ScanJobQueue', () => {
     await q2.drain();
     assert.equal(q2.get(job.id)?.status, 'done');
     assert.equal(storage.saved[0].status, 'done');
+  });
+
+  it('only reports queued once the job is stored, and rolls back on failure', async () => {
+    const storage = memoryStorage();
+    const q = new ScanJobQueue({ storage });
+    storage.failNext = true;
+    await assert.rejects(q.enqueue(event()), /db down/);
+    assert.equal(q.list().length, 0, 'failed write leaves no phantom job');
+
+    const { job } = await q.enqueue(event());
+    assert.equal(storage.saved.find((j) => j.id === job.id)?.status, 'queued');
+  });
+});
+
+describe('postgresStorage', () => {
+  const mem = newDb();
+  const { Pool } = mem.adapters.createPg();
+  __setPoolForTests(new Pool());
+  after(() => __setPoolForTests(null));
+
+  it('writes one row per job and survives a restart', async () => {
+    const q1 = new ScanJobQueue({ storage: postgresStorage() });
+    const { job } = await q1.enqueue(event());
+    await q1.enqueue(event({ deliveryId: 'redelivery' }));
+
+    const q2 = new ScanJobQueue({ storage: postgresStorage() });
+    await q2.load();
+    assert.equal(q2.list().length, 1);
+    assert.deepEqual(q2.get(job.id)?.deliveryIds, ['delivery-1', 'redelivery']);
+
+    q2.start(async () => ({ scanId: 'scan-9' }));
+    q2.stop();
+    await q2.drain();
+    const q3 = new ScanJobQueue({ storage: postgresStorage() });
+    await q3.load();
+    assert.equal(q3.get(job.id)?.status, 'done');
+    assert.equal(q3.get(job.id)?.scanId, 'scan-9');
   });
 });

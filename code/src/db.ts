@@ -52,6 +52,15 @@ async function ensureSchema(): Promise<void> {
   return ready;
 }
 
+/** Run a query after the schema exists. Errors propagate to the caller. */
+export async function dbQuery<R extends pg.QueryResultRow = pg.QueryResultRow>(
+  sql: string,
+  params: unknown[] = []
+): Promise<pg.QueryResult<R>> {
+  await ensureSchema();
+  return getPool().query<R>(sql, params);
+}
+
 export async function loadBlob<T>(name: string): Promise<T | null> {
   await ensureSchema();
   const res = await getPool().query('SELECT data FROM app_store WHERE name = $1', [name]);

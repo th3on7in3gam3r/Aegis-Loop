@@ -2,16 +2,17 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../config.js';
-import { dbConfigured, loadBlob, saveBlob } from '../db.js';
+import { dbConfigured, dbQuery, loadBlob } from '../db.js';
 import type { PullRequestEvent } from '../providers/types.js';
 
 /**
  * Durable scan job queue.
  *
  * Webhooks enqueue and return immediately; a single in-process worker runs
- * jobs with retries and backoff. Jobs persist the same way as other stores
- * (Postgres blob, or a JSON file in dev), so a restart or deploy resumes
- * queued work instead of dropping it.
+ * jobs with retries and backoff. Each job is its own row in the `scan_jobs`
+ * table (or a JSON file in dev), and `enqueue` only resolves after that row
+ * is written — so a "queued" webhook response means the job is durably saved
+ * and a restart or deploy resumes it.
  *
  * Deduplication: one job per provider + repo + PR + commit SHA. Webhook
  * redeliveries and repeated events for the same commit collapse onto the
@@ -47,7 +48,9 @@ export type JobHandler = (job: ScanJob) => Promise<{ scanId?: string } | void>;
 
 export interface QueueStorage {
   load(): Promise<ScanJob[]>;
-  save(jobs: ScanJob[]): void;
+  /** Must resolve only once the job is durably stored. */
+  upsert(job: ScanJob): Promise<void>;
+  remove(ids: string[]): Promise<void>;
 }
 
 export interface QueueOptions {
@@ -65,33 +68,87 @@ export function dedupeKeyFor(event: PullRequestEvent): string {
   return `${event.provider}:${event.repo}#${event.number}@${event.headSha}`;
 }
 
-const BLOB_NAME = 'scan_jobs';
+const LEGACY_BLOB = 'scan_jobs';
+let tableReady: Promise<void> | null = null;
 
-export function defaultStorage(): QueueStorage {
-  const file = join(config.dataDir, 'scan-jobs.json');
+function ensureTable(): Promise<void> {
+  tableReady ??= dbQuery(
+    `CREATE TABLE IF NOT EXISTS scan_jobs (
+       id TEXT PRIMARY KEY,
+       dedupe_key TEXT NOT NULL,
+       status TEXT NOT NULL,
+       data JSONB NOT NULL,
+       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+     )`
+  )
+    .then(() => dbQuery('CREATE INDEX IF NOT EXISTS scan_jobs_status_idx ON scan_jobs (status)'))
+    .then(() => undefined)
+    .catch((err) => {
+      tableReady = null;
+      throw err;
+    });
+  return tableReady;
+}
+
+export function postgresStorage(): QueueStorage {
+  const upsert = async (job: ScanJob) => {
+    await ensureTable();
+    await dbQuery(
+      `INSERT INTO scan_jobs (id, dedupe_key, status, data, updated_at)
+       VALUES ($1, $2, $3, $4::jsonb, now())
+       ON CONFLICT (id) DO UPDATE
+         SET status = EXCLUDED.status, data = EXCLUDED.data, updated_at = now()`,
+      [job.id, job.dedupeKey, job.status, JSON.stringify(job)]
+    );
+  };
   return {
     async load() {
-      if (dbConfigured()) return (await loadBlob<ScanJob[]>(BLOB_NAME)) ?? [];
-      if (!existsSync(file)) return [];
-      try {
-        return JSON.parse(readFileSync(file, 'utf8')) as ScanJob[];
-      } catch {
-        return [];
-      }
+      await ensureTable();
+      const res = await dbQuery<{ data: ScanJob }>('SELECT data FROM scan_jobs');
+      if (res.rows.length > 0) return res.rows.map((r) => r.data);
+      // One-time import from the earlier whole-collection blob.
+      const legacy = (await loadBlob<ScanJob[]>(LEGACY_BLOB)) ?? [];
+      for (const job of legacy) await upsert(job);
+      return legacy;
     },
-    save(jobs) {
-      if (dbConfigured()) {
-        saveBlob(BLOB_NAME, jobs);
-        return;
-      }
-      try {
-        mkdirSync(config.dataDir, { recursive: true });
-        writeFileSync(file, JSON.stringify(jobs, null, 2));
-      } catch {
-        /* keep in memory */
-      }
+    upsert,
+    async remove(ids) {
+      if (ids.length === 0) return;
+      await ensureTable();
+      await dbQuery('DELETE FROM scan_jobs WHERE id = ANY($1::text[])', [ids]);
     },
   };
+}
+
+export function fileStorage(file = join(config.dataDir, 'scan-jobs.json')): QueueStorage {
+  const jobs = new Map<string, ScanJob>();
+  const write = () => {
+    mkdirSync(config.dataDir, { recursive: true });
+    writeFileSync(file, JSON.stringify([...jobs.values()], null, 2));
+  };
+  return {
+    async load() {
+      if (!existsSync(file)) return [];
+      try {
+        for (const job of JSON.parse(readFileSync(file, 'utf8')) as ScanJob[]) jobs.set(job.id, job);
+      } catch {
+        /* corrupt file — start fresh */
+      }
+      return [...jobs.values()];
+    },
+    async upsert(job) {
+      jobs.set(job.id, structuredClone(job));
+      write();
+    },
+    async remove(ids) {
+      for (const id of ids) jobs.delete(id);
+      write();
+    },
+  };
+}
+
+export function defaultStorage(): QueueStorage {
+  return dbConfigured() ? postgresStorage() : fileStorage();
 }
 
 export class ScanJobQueue {
@@ -120,15 +177,19 @@ export class ScanJobQueue {
   async load(): Promise<void> {
     const saved = await this.storage.load();
     for (const job of saved) {
+      this.jobs.set(job.id, job);
       if (job.status === 'running') {
         this.transition(job, 'queued', 'recovered after restart');
+        await this.save(job);
       }
-      this.jobs.set(job.id, job);
     }
-    this.persist();
   }
 
-  enqueue(event: PullRequestEvent): { job: ScanJob; duplicate: boolean } {
+  /**
+   * Resolves once the job is durably stored. If storage fails this throws,
+   * so the webhook answers with an error and the provider redelivers.
+   */
+  async enqueue(event: PullRequestEvent): Promise<{ job: ScanJob; duplicate: boolean }> {
     const key = dedupeKeyFor(event);
     const existing = [...this.jobs.values()].find(
       (j) => j.dedupeKey === key && j.status !== 'failed'
@@ -141,7 +202,7 @@ export class ScanJobQueue {
           status: existing.status,
           note: `duplicate delivery ${event.deliveryId}`,
         });
-        this.persist();
+        await this.save(existing);
       }
       return { job: existing, duplicate: true };
     }
@@ -160,8 +221,15 @@ export class ScanJobQueue {
       updatedAt: at,
       history: [{ at, status: 'queued', note: `delivery ${event.deliveryId}` }],
     };
+    // Reserve the dedupe key in memory first so a concurrent redelivery
+    // collapses onto this job, then roll back if the write fails.
     this.jobs.set(job.id, job);
-    this.persist();
+    try {
+      await this.storage.upsert(job);
+    } catch (err) {
+      this.jobs.delete(job.id);
+      throw err;
+    }
     this.kick();
     return { job, duplicate: false };
   }
@@ -228,7 +296,7 @@ export class ScanJobQueue {
     this.running = true;
     job.attempts += 1;
     this.transition(job, 'running', `attempt ${job.attempts}/${job.maxAttempts}`);
-    this.persist();
+    await this.save(job);
 
     try {
       const result = await this.handler(job);
@@ -246,9 +314,9 @@ export class ScanJobQueue {
         this.transition(job, 'failed', message);
       }
     } finally {
+      await this.save(job);
+      await this.prune();
       this.running = false;
-      this.prune();
-      this.persist();
     }
     return true;
   }
@@ -260,13 +328,29 @@ export class ScanJobQueue {
     job.history.push(note ? { at, status, note } : { at, status });
   }
 
-  private prune(): void {
+  private async prune(): Promise<void> {
     const finished = this.list().filter((j) => j.status === 'done' || j.status === 'failed');
-    for (const job of finished.slice(this.keepFinished)) this.jobs.delete(job.id);
+    const stale = finished.slice(this.keepFinished).map((j) => j.id);
+    if (stale.length === 0) return;
+    for (const id of stale) this.jobs.delete(id);
+    try {
+      await this.storage.remove(stale);
+    } catch (err) {
+      console.error('[jobs] failed to prune finished jobs:', err instanceof Error ? err.message : err);
+    }
   }
 
-  private persist(): void {
-    this.storage.save(this.list());
+  /**
+   * State-change writes after enqueue. A failure is logged, not thrown: the
+   * worst case is a job re-running after a restart, which dedupe and the
+   * idempotent PR comment update make harmless.
+   */
+  private async save(job: ScanJob): Promise<void> {
+    try {
+      await this.storage.upsert(job);
+    } catch (err) {
+      console.error(`[jobs] failed to persist job ${job.id}:`, err instanceof Error ? err.message : err);
+    }
   }
 
   private iso(): string {
