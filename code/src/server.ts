@@ -1,3 +1,4 @@
+import { Readable } from 'node:stream';
 import './load-env.js';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -323,7 +324,9 @@ app.addHook('preParsing', async (request, _reply, payload) => {
   }
   const raw = Buffer.concat(chunks);
   (request as { rawBody?: string }).rawBody = raw.toString('utf8');
-  return raw;
+  // Fastify expects a stream back from preParsing; returning the Buffer
+  // itself crashed the process on every webhook request.
+  return Readable.from([raw]);
 });
 
 function dashboardUrl(scanId: string): string {
