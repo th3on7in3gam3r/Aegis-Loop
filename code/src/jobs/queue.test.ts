@@ -172,4 +172,13 @@ describe('postgresStorage', () => {
     assert.equal(q3.get(job.id)?.status, 'done');
     assert.equal(q3.get(job.id)?.scanId, 'scan-9');
   });
+
+  it('ignores an unrelated scan_jobs table another app created', async () => {
+    const { dbQuery } = await import('../db.js');
+    await dbQuery('CREATE TABLE IF NOT EXISTS scan_jobs (job_id INT, payload TEXT)');
+    const q = new ScanJobQueue({ storage: postgresStorage() });
+    await q.load();
+    const { job } = await q.enqueue(event({ deliveryId: 'collision-check', headSha: 'e'.repeat(40) }));
+    assert.equal(q.get(job.id)?.status, 'queued');
+  });
 });

@@ -9,7 +9,7 @@ import type { PullRequestEvent } from '../providers/types.js';
  * Durable scan job queue.
  *
  * Webhooks enqueue and return immediately; a single in-process worker runs
- * jobs with retries and backoff. Each job is its own row in the `scan_jobs`
+ * jobs with retries and backoff. Each job is its own row in the `aegis_scan_jobs`
  * table (or a JSON file in dev), and `enqueue` only resolves after that row
  * is written — so a "queued" webhook response means the job is durably saved
  * and a restart or deploy resumes it.
@@ -69,11 +69,16 @@ export function dedupeKeyFor(event: PullRequestEvent): string {
 }
 
 const LEGACY_BLOB = 'scan_jobs';
+/**
+ * Namespaced so it can't collide with a `scan_jobs` table another app
+ * already keeps in the same database (that collision crashed startup).
+ */
+const TABLE = 'aegis_scan_jobs';
 let tableReady: Promise<void> | null = null;
 
 function ensureTable(): Promise<void> {
   tableReady ??= dbQuery(
-    `CREATE TABLE IF NOT EXISTS scan_jobs (
+    `CREATE TABLE IF NOT EXISTS ${TABLE} (
        id TEXT PRIMARY KEY,
        dedupe_key TEXT NOT NULL,
        status TEXT NOT NULL,
@@ -81,7 +86,7 @@ function ensureTable(): Promise<void> {
        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
      )`
   )
-    .then(() => dbQuery('CREATE INDEX IF NOT EXISTS scan_jobs_status_idx ON scan_jobs (status)'))
+    .then(() => dbQuery(`CREATE INDEX IF NOT EXISTS ${TABLE}_status_idx ON ${TABLE} (status)`))
     .then(() => undefined)
     .catch((err) => {
       tableReady = null;
@@ -94,7 +99,7 @@ export function postgresStorage(): QueueStorage {
   const upsert = async (job: ScanJob) => {
     await ensureTable();
     await dbQuery(
-      `INSERT INTO scan_jobs (id, dedupe_key, status, data, updated_at)
+      `INSERT INTO ${TABLE} (id, dedupe_key, status, data, updated_at)
        VALUES ($1, $2, $3, $4::jsonb, now())
        ON CONFLICT (id) DO UPDATE
          SET status = EXCLUDED.status, data = EXCLUDED.data, updated_at = now()`,
@@ -104,7 +109,7 @@ export function postgresStorage(): QueueStorage {
   return {
     async load() {
       await ensureTable();
-      const res = await dbQuery<{ data: ScanJob }>('SELECT data FROM scan_jobs');
+      const res = await dbQuery<{ data: ScanJob }>(`SELECT data FROM ${TABLE}`);
       if (res.rows.length > 0) return res.rows.map((r) => r.data);
       // One-time import from the earlier whole-collection blob.
       const legacy = (await loadBlob<ScanJob[]>(LEGACY_BLOB)) ?? [];
@@ -115,7 +120,7 @@ export function postgresStorage(): QueueStorage {
     async remove(ids) {
       if (ids.length === 0) return;
       await ensureTable();
-      await dbQuery('DELETE FROM scan_jobs WHERE id = ANY($1::text[])', [ids]);
+      await dbQuery(`DELETE FROM ${TABLE} WHERE id = ANY($1::text[])`, [ids]);
     },
   };
 }
@@ -175,7 +180,15 @@ export class ScanJobQueue {
 
   /** Load persisted jobs. Jobs left `running` by a crash go back to the queue. */
   async load(): Promise<void> {
-    const saved = await this.storage.load();
+    let saved: ScanJob[];
+    try {
+      saved = await this.storage.load();
+    } catch (err) {
+      // Serve the site even if the queue's storage is unhappy; new jobs will
+      // surface write errors on enqueue.
+      console.error('[jobs] could not load scan jobs:', err instanceof Error ? err.message : err);
+      return;
+    }
     for (const job of saved) {
       this.jobs.set(job.id, job);
       if (job.status === 'running') {
