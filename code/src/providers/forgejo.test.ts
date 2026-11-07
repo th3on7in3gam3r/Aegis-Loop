@@ -185,6 +185,12 @@ describe('ForgejoProvider API', () => {
     assert.equal(calls.filter((c) => c.method === 'POST' && c.path.endsWith('/comments')).length, 0);
   });
 
+  it('refuses to publish when the token cannot identify itself', async () => {
+    const { fetchImpl, calls } = fakeForgejo({ status: { 'GET /user': 403 } });
+    await assert.rejects(provider(fetchImpl).publishReview(scan(), 'https://aegis/app'), /read:user/);
+    assert.equal(calls.some((c) => c.method === 'POST' || c.method === 'PATCH'), false);
+  });
+
   it('explains missing permissions clearly', async () => {
     const { fetchImpl } = fakeForgejo({ status: { [`POST /repos/forge-one/app/statuses/${SHA}`]: 403 } });
     await assert.rejects(

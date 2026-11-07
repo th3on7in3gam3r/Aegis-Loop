@@ -95,7 +95,7 @@ export class ForgejoProvider implements GitProvider {
   private readonly token: string;
   private readonly webhookSecret: string;
   private readonly fetchImpl: FetchLike;
-  private identity: Promise<string | null> | null = null;
+  private identity: Promise<string> | null = null;
 
   constructor(opts: ForgejoOptions = {}) {
     const raw = (opts.baseUrl ?? config.forgejo.url).replace(/\/+$/, '');
@@ -219,11 +219,24 @@ export class ForgejoProvider implements GitProvider {
     };
   }
 
-  /** Login of the account behind the token, so we only ever edit our own comment. */
-  private ownLogin(): Promise<string | null> {
+  /**
+   * Login of the account behind the token, so we only ever edit our own
+   * comment. Required: without it we can't tell our comment from a copy, and
+   * would either risk editing someone else's or post a duplicate every push.
+   */
+  private ownLogin(): Promise<string> {
     this.identity ??= this.api<ForgejoUser>('GET', '/user')
-      .then((u) => login(u) || null)
-      .catch(() => null);
+      .then((u) => {
+        const name = login(u);
+        if (!name) throw new Error('Forgejo /user returned no login');
+        return name;
+      })
+      .catch((err) => {
+        this.identity = null; // allow a retry on the next job
+        throw new Error(
+          `Forgejo token can't read its own account (GET /user). Give the bot token the read:user scope. ${err instanceof Error ? err.message : ''}`.trim()
+        );
+      });
     return this.identity;
   }
 
