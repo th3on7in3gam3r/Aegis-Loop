@@ -24,7 +24,7 @@ import {
   pushAutofixToBranch,
   updateExistingBotComment,
 } from './github/pr.js';
-import { handleGitHubWebhook } from './github/webhooks.js';
+import { handleGitHubWebhook, runScanJob, scanJobs } from './github/webhooks.js';
 import { scanDirectory } from './scanner/index.js';
 import { scanCloudDirectory } from './modules/cloud/scanner.js';
 import { scanAttackTarget, scanAttackTargets } from './modules/attack/scanner.js';
@@ -96,6 +96,7 @@ await loadStore();
 await loadProtectStore();
 await loadAccountStore();
 await loadSessionStore();
+await scanJobs.load();
 
 // Fixed-window per-key rate limiter (in-memory; fine for single instance)
 function makeRateLimiter(limit: number, windowMs: number) {
@@ -643,7 +644,7 @@ app.post('/api/scans/pull-request', async (req, reply) => {
 
   try {
     const pr = await fetchPullRequest(token, owner, repo, pullNumber);
-    tempDir = await clonePullRequest(owner, repo, pr.headBranch, token);
+    tempDir = await clonePullRequest(owner, repo, pr.headBranch, token, pr.headSha);
     const scan = tagScan(await scanDirectory(tempDir, repoName, pr.headBranch), auth.login);
     scan.pullRequest = pr;
     persistScan(scan);
@@ -947,7 +948,7 @@ app.post('/api/ci/scan', async (req, reply) => {
   try {
     if (body.pr) {
       const pr = await fetchPullRequest(token, owner, repo, body.pr);
-      tempDir = await clonePullRequest(owner, repo, pr.headBranch, token);
+      tempDir = await clonePullRequest(owner, repo, pr.headBranch, token, pr.headSha);
       const scan = tagScan(await scanDirectory(tempDir, repoName, pr.headBranch), auth.login);
       scan.pullRequest = pr;
       persistScan(scan);
@@ -1144,12 +1145,11 @@ app.post('/api/protect/demo', async (req, reply) => {
 
 app.post('/api/webhooks/github', async (req, reply) => {
   const rawBody = (req as { rawBody?: string }).rawBody ?? JSON.stringify(req.body);
-  const signature = req.headers['x-hub-signature-256'] as string | undefined;
-  const event = req.headers['x-github-event'] as string | undefined;
 
   try {
-    const result = await handleGitHubWebhook(rawBody, signature, event);
-    return result;
+    // Enqueue and answer fast — GitHub gives up on webhooks after ~10s.
+    const result = await handleGitHubWebhook(rawBody, req.headers);
+    return reply.status(result.queued ? 202 : 200).send(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Webhook error';
     return reply.status(400).send({ error: message });
@@ -1173,6 +1173,7 @@ if (!isLocalApp && (!process.env.SESSION_SECRET || config.sessionSecret === DEV_
 }
 
 await app.listen({ port: config.port, host: '0.0.0.0' });
+scanJobs.start(runScanJob);
 console.log(`\n  Aegis Loop → ${config.appUrl}`);
 console.log(`  Login      → ${config.appUrl}/login`);
 console.log(`  Dashboard  → ${config.appUrl}/app\n`);

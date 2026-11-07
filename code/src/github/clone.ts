@@ -40,11 +40,29 @@ export function parsePrInput(input: string): { owner: string; repo: string; pull
   throw new Error('Invalid PR — use owner/repo#123 or a GitHub PR URL');
 }
 
-function authCloneUrl(owner: string, repo: string, token?: string): string {
-  if (token) {
-    return `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
-  }
-  return `https://github.com/${owner}/${repo}.git`;
+const GITHUB_HOST = 'https://github.com';
+
+/**
+ * Pass the token as an HTTP header instead of embedding it in the clone URL,
+ * so it never appears in git's error output, process lists or logs.
+ */
+function authArgs(token?: string): string[] {
+  if (!token) return [];
+  const basic = Buffer.from(`x-access-token:${token}`).toString('base64');
+  return ['-c', `http.extraHeader=Authorization: Basic ${basic}`];
+}
+
+/** Strip anything that looks like a credential from a git error message. */
+export function redactGitError(message: string, token?: string): string {
+  let out = message.replace(/(https?:\/\/)[^/@\s]+@/g, '$1***@');
+  out = out.replace(/(Authorization: )\S+( \S+)?/gi, '$1***');
+  if (token) out = out.split(token).join('***');
+  return out;
+}
+
+function cloneError(owner: string, repo: string, ref: string, err: unknown, token?: string): Error {
+  const detail = err instanceof Error ? err.message : 'clone failed';
+  return new Error(`Could not clone ${owner}/${repo}@${ref}: ${redactGitError(detail, token)}`);
 }
 
 export async function cloneRepo(
@@ -54,15 +72,41 @@ export async function cloneRepo(
   token?: string
 ): Promise<string> {
   const dir = mkdtempSync(join(tmpdir(), 'aegis-scan-'));
-  const git = simpleGit();
-  const url = authCloneUrl(owner, repo, token);
+  const url = `${GITHUB_HOST}/${owner}/${repo}.git`;
 
   try {
-    await git.clone(url, dir, ['--depth', '1', '--branch', branch]);
+    await simpleGit().raw([...authArgs(token), 'clone', '--depth', '1', '--branch', branch, url, dir]);
   } catch (err) {
     cleanupDir(dir);
-    const detail = err instanceof Error ? err.message : 'clone failed';
-    throw new Error(`Could not clone ${owner}/${repo}@${branch}: ${detail}`);
+    throw cloneError(owner, repo, branch, err, token);
+  }
+
+  return dir;
+}
+
+/**
+ * Check out one exact commit. Scanning a pinned SHA (rather than the branch
+ * tip) means a push that lands mid-scan can't make results describe the
+ * wrong code.
+ */
+export async function cloneAtCommit(
+  owner: string,
+  repo: string,
+  sha: string,
+  token?: string
+): Promise<string> {
+  if (!/^[0-9a-f]{7,40}$/i.test(sha)) throw new Error(`Invalid commit SHA: ${sha}`);
+  const dir = mkdtempSync(join(tmpdir(), 'aegis-scan-'));
+  const url = `${GITHUB_HOST}/${owner}/${repo}.git`;
+  const git = simpleGit(dir);
+
+  try {
+    await git.init();
+    await git.raw([...authArgs(token), 'fetch', '--depth', '1', url, sha]);
+    await git.raw(['checkout', '--detach', 'FETCH_HEAD']);
+  } catch (err) {
+    cleanupDir(dir);
+    throw cloneError(owner, repo, sha.slice(0, 12), err, token);
   }
 
   return dir;
@@ -72,8 +116,10 @@ export async function clonePullRequest(
   owner: string,
   repo: string,
   headBranch: string,
-  token?: string
+  token?: string,
+  headSha?: string
 ): Promise<string> {
+  if (headSha) return cloneAtCommit(owner, repo, headSha, token);
   return cloneRepo(owner, repo, headBranch, token);
 }
 

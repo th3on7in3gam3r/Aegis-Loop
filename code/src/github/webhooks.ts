@@ -1,100 +1,88 @@
-import { Webhooks } from '@octokit/webhooks';
 import { config } from '../config.js';
 import { scanDirectory } from '../scanner/index.js';
 import { saveScan, updateScanMeta } from '../store.js';
 import { queueScanCompleteEmail } from '../email/notifications.js';
 import { UTM, withUtm } from '../utm.js';
-import { cleanupDir, clonePullRequest } from './clone.js';
-import { fetchPullRequest, publishScanToGitHub } from './pr.js';
+import { ScanJobQueue, type ScanJob } from '../jobs/queue.js';
+import { GitHubProvider } from '../providers/github.js';
+import type { GitProvider, PullRequestEvent, WebhookHeaders } from '../providers/types.js';
 
-let webhooks: Webhooks | null = null;
+const github = new GitHubProvider();
+const providers: Record<string, GitProvider> = { github };
 
-function getWebhooks(): Webhooks | null {
-  if (!config.github.webhookSecret) return null;
-  if (!webhooks) {
-    webhooks = new Webhooks({ secret: config.github.webhookSecret });
-  }
-  return webhooks;
-}
+export const scanJobs = new ScanJobQueue();
 
-async function runPrScan(
-  owner: string,
-  repo: string,
-  pullNumber: number,
-  token: string,
-  userLogin: string
+/**
+ * Scan exactly the commit the webhook named, then publish to the PR.
+ * Provider-agnostic: works for any GitProvider.
+ */
+export async function runPrScan(
+  provider: GitProvider,
+  event: PullRequestEvent
 ): Promise<string> {
-  const pr = await fetchPullRequest(token, owner, repo, pullNumber);
-  let tempDir: string | undefined;
+  const meta = await provider.getPullRequest(event.repo, event.number);
+  // Pin to the event's commit even if the PR has moved on since.
+  const pullRequest = { ...meta, headSha: event.headSha };
+  const checkout = await provider.checkoutCommit(event.repo, event.headSha);
 
   try {
-    tempDir = await clonePullRequest(owner, repo, pr.headBranch, token);
-    const scan = await scanDirectory(tempDir, `${owner}/${repo}`, pr.headBranch);
-    scan.pullRequest = pr;
-    scan.userLogin = userLogin;
+    const scan = await scanDirectory(checkout.dir, event.repo, pullRequest.headBranch);
+    scan.pullRequest = pullRequest;
+    scan.userLogin = event.actor;
     saveScan(scan);
     queueScanCompleteEmail(scan);
 
-    const dashboardUrl = withUtm(
-      `${config.appUrl}/app/?scan=${scan.id}`,
-      UTM.githubPrComment
-    );
-    const { commentUrl, statusUrl } = await publishScanToGitHub(token, scan, dashboardUrl);
+    const dashboardUrl = withUtm(`${config.appUrl}/app/?scan=${scan.id}`, UTM.githubPrComment);
+    const { commentUrl, statusUrl } = await provider.publishReview(scan, dashboardUrl);
     updateScanMeta(scan.id, { githubCommentUrl: commentUrl, checkStatusUrl: statusUrl });
-
     return scan.id;
   } finally {
-    if (tempDir) cleanupDir(tempDir);
+    checkout.cleanup();
   }
 }
+
+export async function runScanJob(job: ScanJob): Promise<{ scanId: string }> {
+  const provider = providers[job.event.provider];
+  if (!provider) throw new Error(`No provider registered for ${job.event.provider}`);
+  return { scanId: await runPrScan(provider, job.event) };
+}
+
+export type WebhookResult = {
+  handled: boolean;
+  queued?: boolean;
+  duplicate?: boolean;
+  jobId?: string;
+  message?: string;
+};
 
 export async function handleGitHubWebhook(
   payload: string,
-  signature: string | undefined,
-  event: string | undefined
-): Promise<{ handled: boolean; scanId?: string; message?: string }> {
-  const hook = getWebhooks();
-  if (!hook) {
+  headers: WebhookHeaders
+): Promise<WebhookResult> {
+  if (!github.configured) {
     return { handled: false, message: 'Webhooks not configured (set GITHUB_WEBHOOK_SECRET)' };
   }
-
-  if (!signature || !event) {
+  if (!headers['x-hub-signature-256'] || !headers['x-github-event']) {
     throw new Error('Missing webhook headers');
   }
-
-  const valid = await hook.verify(payload, signature);
-  if (!valid) {
+  if (!(await github.verifyWebhook(payload, headers))) {
     throw new Error('Invalid webhook signature');
   }
 
-  if (event !== 'pull_request') {
-    return { handled: true, message: `Ignored event: ${event}` };
+  const event = github.parseEvent(payload, headers);
+  if (!event) {
+    return { handled: true, message: 'Ignored event' };
   }
-
-  const data = JSON.parse(payload) as {
-    action: string;
-    pull_request: { number: number };
-    repository: { name: string; owner: { login: string } };
-  };
-
-  if (!['opened', 'synchronize', 'reopened'].includes(data.action)) {
-    return { handled: true, message: `Ignored PR action: ${data.action}` };
-  }
-
-  const token = config.github.token;
-  if (!token) {
+  if (!config.github.token) {
     return { handled: false, message: 'GITHUB_TOKEN required for webhook scans' };
   }
 
-  const scanId = await runPrScan(
-    data.repository.owner.login,
-    data.repository.name,
-    data.pull_request.number,
-    token,
-    data.repository.owner.login
-  );
-
-  return { handled: true, scanId, message: 'PR scan complete' };
+  const { job, duplicate } = scanJobs.enqueue(event);
+  return {
+    handled: true,
+    queued: !duplicate,
+    duplicate,
+    jobId: job.id,
+    message: duplicate ? 'Duplicate delivery — scan already queued' : 'PR scan queued',
+  };
 }
-
-export { runPrScan };
