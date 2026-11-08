@@ -27,6 +27,8 @@ export const config = {
     url: (process.env.FORGEJO_URL || '').replace(/\/+$/, ''),
     token: process.env.FORGEJO_TOKEN || '',
     webhookSecret: process.env.FORGEJO_WEBHOOK_SECRET || '',
+    /** Bearer token for POST /api/forge/summary (Forge ONE dashboard). Empty = endpoint off. */
+    summaryToken: process.env.FORGE_SUMMARY_TOKEN || '',
   },
   ai: {
     provider:

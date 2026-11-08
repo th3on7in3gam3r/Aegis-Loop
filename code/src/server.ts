@@ -73,6 +73,7 @@ import {
   type StudioBillingPartnerEvent,
 } from './billing/studioPartner.js';
 import { getScan, listScans, loadStore, saveScan, updateFinding, updateScanMeta } from './store.js';
+import { latestForgeScans, parseSummaryRequest, summaryTokenValid } from './providers/forgeSummary.js';
 import { queueScanCompleteEmail, sendContactEmails } from './email/notifications.js';
 import { isEmailConfigured } from './email/config.js';
 import { isValidRecipientEmail } from './email/send.js';
@@ -372,6 +373,7 @@ const healthBody = (persistence: ReturnType<typeof persistenceHealth>) => ({
   },
   forgejo: {
     configured: Boolean(config.forgejo.url && config.forgejo.token && config.forgejo.webhookSecret),
+    summary: Boolean(config.forgejo.summaryToken),
   },
   ai: {
     configured: llmConfigured(),
@@ -1178,6 +1180,27 @@ app.post('/api/webhooks/github', async (req, reply) => {
   } catch (err) {
     return webhookError(reply, err);
   }
+});
+
+/**
+ * Forge ONE dashboard: latest successful code scan per Forgejo repo.
+ * Server-to-server only (Bearer FORGE_SUMMARY_TOKEN); 404 when not configured.
+ */
+app.post('/api/forge/summary', async (req, reply) => {
+  if (!config.forgejo.summaryToken) return reply.status(404).send({ error: 'Not found' });
+  if (!summaryTokenValid(req.headers.authorization, config.forgejo.summaryToken)) {
+    return reply.status(401).send({ error: 'Unauthorized' });
+  }
+  const parsed = parseSummaryRequest(req.body);
+  if ('error' in parsed) return reply.status(400).send({ error: parsed.error });
+  let origin = '';
+  try {
+    origin = config.forgejo.url ? new URL(config.forgejo.url).origin : '';
+  } catch {
+    origin = '';
+  }
+  reply.header('Cache-Control', 'no-store');
+  return { repos: latestForgeScans(listScans('code'), parsed.repos, origin) };
 });
 
 app.post('/api/webhooks/forgejo', async (req, reply) => {

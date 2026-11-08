@@ -30,6 +30,7 @@ export async function runPrScan(
   try {
     const scan = await scanDirectory(checkout.dir, event.repo, pullRequest.headBranch);
     scan.pullRequest = pullRequest;
+    scan.provider = event.provider;
     scan.userLogin = event.actor;
     saveScan(scan);
     queueScanCompleteEmail(scan);

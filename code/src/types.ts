@@ -61,6 +61,8 @@ export interface ScanResult {
   findings: Finding[];
   stats: ScanStats;
   pullRequest?: PullRequestMeta;
+  /** Git provider for PR scans ('github' | 'forgejo'); absent on older scans. */
+  provider?: string;
   githubCommentUrl?: string;
   checkStatusUrl?: string;
 }
