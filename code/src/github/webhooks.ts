@@ -5,10 +5,12 @@ import { queueScanCompleteEmail } from '../email/notifications.js';
 import { UTM, withUtm } from '../utm.js';
 import { ScanJobQueue, type ScanJob } from '../jobs/queue.js';
 import { GitHubProvider } from '../providers/github.js';
+import { ForgejoProvider } from '../providers/forgejo.js';
 import type { GitProvider, PullRequestEvent, WebhookHeaders } from '../providers/types.js';
 
 const github = new GitHubProvider();
-const providers: Record<string, GitProvider> = { github };
+const forgejo = new ForgejoProvider();
+const providers: Record<string, GitProvider> = { github, forgejo };
 
 export const scanJobs = new ScanJobQueue();
 
@@ -28,6 +30,7 @@ export async function runPrScan(
   try {
     const scan = await scanDirectory(checkout.dir, event.repo, pullRequest.headBranch);
     scan.pullRequest = pullRequest;
+    scan.provider = event.provider;
     scan.userLogin = event.actor;
     saveScan(scan);
     queueScanCompleteEmail(scan);
@@ -78,6 +81,35 @@ export async function handleGitHubWebhook(
   }
 
   const { job, duplicate } = await scanJobs.enqueue(event);
+  return {
+    handled: true,
+    queued: !duplicate,
+    duplicate,
+    jobId: job.id,
+    message: duplicate ? 'Duplicate delivery — scan already queued' : 'PR scan queued',
+  };
+}
+
+/** Forge ONE: same pipeline, Forgejo webhooks. */
+export async function handleForgejoWebhook(
+  payload: string,
+  headers: WebhookHeaders,
+  provider: ForgejoProvider = forgejo,
+  queue: ScanJobQueue = scanJobs
+): Promise<WebhookResult> {
+  if (!provider.configured) {
+    return {
+      handled: false,
+      message: 'Forgejo not configured (set FORGEJO_URL, FORGEJO_TOKEN, FORGEJO_WEBHOOK_SECRET)',
+    };
+  }
+  if (!(await provider.verifyWebhook(payload, headers))) {
+    throw new Error('Invalid webhook signature');
+  }
+  const event = provider.parseEvent(payload, headers);
+  if (!event) return { handled: true, message: 'Ignored event' };
+
+  const { job, duplicate } = await queue.enqueue(event);
   return {
     handled: true,
     queued: !duplicate,

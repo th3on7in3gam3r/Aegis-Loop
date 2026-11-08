@@ -52,7 +52,12 @@ const GITHUB_HOST = 'https://github.com';
  *   so git (and any hooks/filters a repo might try to trigger) never sees
  *   DATABASE_URL, API keys or other production secrets.
  */
-export function gitEnv(token?: string): Record<string, string> {
+/** `Authorization` header value GitHub accepts for git over HTTPS. */
+export function githubAuthHeader(token: string): string {
+  return `Basic ${Buffer.from(`x-access-token:${token}`).toString('base64')}`;
+}
+
+export function gitEnv(authHeader?: string): Record<string, string> {
   const env: Record<string, string> = {
     PATH: process.env.PATH ?? '/usr/bin:/bin',
     HOME: tmpdir(),
@@ -67,22 +72,21 @@ export function gitEnv(token?: string): Record<string, string> {
     const value = process.env[key];
     if (value) env[key] = value;
   }
-  if (token) {
-    const basic = Buffer.from(`x-access-token:${token}`).toString('base64');
+  if (authHeader) {
     env.GIT_CONFIG_COUNT = '2';
     env.GIT_CONFIG_KEY_1 = 'http.extraHeader';
-    env.GIT_CONFIG_VALUE_1 = `Authorization: Basic ${basic}`;
+    env.GIT_CONFIG_VALUE_1 = `Authorization: ${authHeader}`;
   }
   return env;
 }
 
-function git(dir?: string, token?: string) {
+function git(dir?: string, authHeader?: string) {
   // simple-git blocks GIT_CONFIG_* env and core.hooksPath by default; we set
   // them ourselves (auth header, hooks disabled), never from user input.
   return simpleGit({
     ...(dir ? { baseDir: dir } : {}),
     unsafe: { allowUnsafeConfigEnvCount: true, allowUnsafeHooksPath: true },
-  }).env(gitEnv(token));
+  }).env(gitEnv(authHeader));
 }
 
 /** Strip anything that looks like a credential from a git error message. */
@@ -108,7 +112,7 @@ export async function cloneRepo(
   const url = `${GITHUB_HOST}/${owner}/${repo}.git`;
 
   try {
-    await git(undefined, token).raw(['clone', '--depth', '1', '--branch', branch, url, dir]);
+    await git(undefined, token ? githubAuthHeader(token) : undefined).raw(['clone', '--depth', '1', '--branch', branch, url, dir]);
   } catch (err) {
     cleanupDir(dir);
     throw cloneError(owner, repo, branch, err, token);
@@ -128,10 +132,28 @@ export async function cloneAtCommit(
   sha: string,
   token?: string
 ): Promise<string> {
-  if (!/^[0-9a-f]{7,40}$/i.test(sha)) throw new Error(`Invalid commit SHA: ${sha}`);
+  return checkoutCommitFromUrl({
+    url: `${GITHUB_HOST}/${owner}/${repo}.git`,
+    sha,
+    authHeader: token ? githubAuthHeader(token) : undefined,
+    label: `${owner}/${repo}`,
+    secret: token,
+  });
+}
+
+/** Provider-neutral exact-commit checkout (used by the Forgejo adapter too). */
+export async function checkoutCommitFromUrl(opts: {
+  url: string;
+  sha: string;
+  authHeader?: string;
+  label: string;
+  /** Raw credential to scrub from error text. */
+  secret?: string;
+}): Promise<string> {
+  const { url, sha, authHeader, label, secret } = opts;
+  if (!/^[0-9a-f]{7,64}$/i.test(sha)) throw new Error(`Invalid commit SHA: ${sha}`);
   const dir = mkdtempSync(join(tmpdir(), 'aegis-scan-'));
-  const url = `${GITHUB_HOST}/${owner}/${repo}.git`;
-  const repoGit = git(dir, token);
+  const repoGit = git(dir, authHeader);
 
   try {
     await repoGit.init();
@@ -139,7 +161,9 @@ export async function cloneAtCommit(
     await repoGit.raw(['checkout', '--detach', 'FETCH_HEAD']);
   } catch (err) {
     cleanupDir(dir);
-    throw cloneError(owner, repo, sha.slice(0, 12), err, token);
+    const detail = err instanceof Error ? err.message : 'clone failed';
+    const scrubbed = authHeader ? detail.split(authHeader).join('***') : detail;
+    throw new Error(`Could not clone ${label}@${sha.slice(0, 12)}: ${redactGitError(scrubbed, secret)}`);
   }
 
   return dir;
